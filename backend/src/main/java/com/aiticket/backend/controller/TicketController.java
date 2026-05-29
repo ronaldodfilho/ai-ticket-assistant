@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -47,5 +48,15 @@ public class TicketController {
     @ResponseStatus(HttpStatus.CREATED)
     public InteractionResponseDto addInteraction(@PathVariable UUID id, @Valid @RequestBody InteractionCreateDto dto) {
         return interactionService.addInteraction(id, dto);
+    }
+
+    @GetMapping("/{id}/summary")
+    public Map<String, String> getSummary(@PathVariable UUID id) {
+        return Map.of("summary", ticketService.summarizeTicket(id));
+    }
+
+    @GetMapping("/{id}/suggest-response")
+    public Map<String, String> getSuggestedResponse(@PathVariable UUID id) {
+        return Map.of("suggestion", ticketService.suggestResponse(id));
     }
 }
