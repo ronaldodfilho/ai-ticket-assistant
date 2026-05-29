@@ -1,0 +1,62 @@
+package com.aiticket.backend.domain.entity;
+
+import com.aiticket.backend.domain.enums.TicketCategory;
+import com.aiticket.backend.domain.enums.TicketPriority;
+import com.aiticket.backend.domain.enums.TicketStatus;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+@Entity
+@Table(name = "tickets")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Ticket {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    @Column(nullable = false)
+    private String title;
+
+    @Column(columnDefinition = "TEXT", nullable = false)
+    private String description;
+
+    @Enumerated(EnumType.STRING)
+    private TicketCategory category;
+
+    @Enumerated(EnumType.STRING)
+    private TicketPriority priority;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private TicketStatus status = TicketStatus.ABERTO;
+
+    private String department;
+
+    @Column(name = "user_name")
+    private String userName; // Mocked user who opened the ticket
+
+    @OneToMany(mappedBy = "ticket", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<Interaction> interactions = new ArrayList<>();
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+}
