@@ -24,6 +24,7 @@ public class AiIntegrationService {
 
     private static final String GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=";
 
+    @SuppressWarnings("unchecked")
     public String generateContent(String prompt) {
         if (geminiApiKey == null || geminiApiKey.isEmpty() || geminiApiKey.equals("SUA_CHAVE_AQUI")) {
             log.warn("Gemini API Key is missing. Returning mocked AI response.");

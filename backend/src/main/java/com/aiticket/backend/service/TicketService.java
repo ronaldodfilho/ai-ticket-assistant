@@ -6,7 +6,6 @@ import com.aiticket.backend.domain.enums.InteractionAuthor;
 import com.aiticket.backend.domain.enums.TicketCategory;
 import com.aiticket.backend.domain.enums.TicketPriority;
 import com.aiticket.backend.domain.enums.TicketStatus;
-import com.aiticket.backend.dto.InteractionCreateDto;
 import com.aiticket.backend.dto.TicketCreateDto;
 import com.aiticket.backend.dto.TicketResponseDto;
 import com.aiticket.backend.repository.TicketRepository;
