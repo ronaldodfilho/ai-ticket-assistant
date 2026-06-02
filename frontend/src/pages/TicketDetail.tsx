@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../api/axios';
-import { Ticket, Interaction } from '../store/ticketStore';
+import type { Ticket, Interaction } from '../store/ticketStore';
 import { ArrowLeft, Bot, Send, Zap } from 'lucide-react';
 import { format } from 'date-fns';
 
