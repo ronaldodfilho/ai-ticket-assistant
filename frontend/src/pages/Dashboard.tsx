@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useTicketStore } from '../store/ticketStore';
 import { Link } from 'react-router-dom';
-import { Ticket as TicketIcon, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Ticket as TicketIcon, Clock, CheckCircle2, AlertCircle, Plus } from 'lucide-react';
 
 export default function Dashboard() {
     const { tickets, stats, fetchTickets, fetchStats, loading } = useTicketStore();
@@ -24,9 +24,18 @@ export default function Dashboard() {
     return (
         <div className="flex-1 p-8">
             <div className="max-w-6xl mx-auto">
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Dashboard</h1>
-                    <p className="text-slate-500 mt-1">Visão geral do sistema de suporte.</p>
+                <div className="flex justify-between items-center mb-8">
+                    <div>
+                        <h1 className="text-3xl font-bold text-slate-800 tracking-tight">Dashboard</h1>
+                        <p className="text-slate-500 mt-1">Visão geral do sistema de suporte.</p>
+                    </div>
+                    <Link 
+                        to="/" 
+                        className="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-xl transition-colors shadow-lg shadow-brand-500/20 text-sm flex items-center gap-2"
+                    >
+                        <Plus size={18} />
+                        Novo Chamado
+                    </Link>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
