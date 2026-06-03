@@ -3,8 +3,6 @@ package com.aiticket.backend.service;
 import com.aiticket.backend.domain.entity.Interaction;
 import com.aiticket.backend.domain.entity.Ticket;
 import com.aiticket.backend.domain.enums.InteractionAuthor;
-import com.aiticket.backend.domain.enums.TicketCategory;
-import com.aiticket.backend.domain.enums.TicketPriority;
 import com.aiticket.backend.domain.enums.TicketStatus;
 import com.aiticket.backend.dto.TicketCreateDto;
 import com.aiticket.backend.dto.TicketResponseDto;
@@ -25,6 +23,7 @@ public class TicketService {
 
     private final TicketRepository ticketRepository;
     private final AiIntegrationService aiService;
+    private final TicketClassifier classifier;
 
     @Transactional
     public TicketResponseDto createTicket(TicketCreateDto dto) {
@@ -44,29 +43,10 @@ public class TicketService {
 
         ticket.getInteractions().add(initialInteraction);
 
-        // Chamar IA para classificação
-        try {
-            String prompt = "Analise o seguinte chamado de suporte:\\n\\nTítulo: " + dto.title() + "\\nDescrição: " + dto.description() + "\\n\\nClassifique o chamado retornando APENAS uma string no seguinte formato: CATEGORIA|PRIORIDADE|SETOR.\\nOpções de CATEGORIA: FISCAL, TI, RH, FINANCEIRO, SISTEMA, OUTROS.\\nOpções de PRIORIDADE: BAIXA, MEDIA, ALTA, URGENTE.\\nOpções de SETOR: SUPORTE_N1, SUPORTE_ERP, INFRAESTRUTURA, RH, FINANCEIRO.";
-            String aiClassification = aiService.generateContent(prompt);
-            
-            if (aiClassification != null && aiClassification.contains("|")) {
-                String[] parts = aiClassification.split("\\\\|");
-                if (parts.length >= 3) {
-                    ticket.setCategory(TicketCategory.valueOf(parts[0].trim().toUpperCase()));
-                    ticket.setPriority(TicketPriority.valueOf(parts[1].trim().toUpperCase()));
-                    ticket.setDepartment(parts[2].trim());
-                }
-            } else {
-                ticket.setCategory(TicketCategory.OUTROS);
-                ticket.setPriority(TicketPriority.MEDIA);
-                ticket.setDepartment("SUPORTE_N1");
-            }
-        } catch (Exception e) {
-            log.error("Erro na classificação da IA, usando fallback.", e);
-            ticket.setCategory(TicketCategory.OUTROS);
-            ticket.setPriority(TicketPriority.MEDIA);
-            ticket.setDepartment("SUPORTE_N1");
-        }
+        TicketClassification classification = classifier.classify(dto.title(), dto.description());
+        ticket.setCategory(classification.category());
+        ticket.setPriority(classification.priority());
+        ticket.setDepartment(classification.department());
 
         Ticket savedTicket = ticketRepository.save(ticket);
         return mapToResponseDto(savedTicket);
@@ -93,10 +73,10 @@ public class TicketService {
         
         StringBuilder history = new StringBuilder();
         for (Interaction interaction : ticket.getInteractions()) {
-            history.append(interaction.getAuthorName()).append(": ").append(interaction.getMessage()).append("\\n");
+            history.append(interaction.getAuthorName()).append(": ").append(interaction.getMessage()).append("\n");
         }
         
-        String prompt = "Por favor, faça um resumo conciso (máximo 3 frases) do histórico deste chamado de suporte para que um novo atendente possa entender rapidamente o problema atual:\\n\\n" + history.toString();
+        String prompt = "Por favor, faça um resumo conciso (máximo 3 frases) do histórico deste chamado de suporte para que um novo atendente possa entender rapidamente o problema atual:\n\n" + history.toString();
         return aiService.generateContent(prompt);
     }
 
@@ -107,10 +87,10 @@ public class TicketService {
         
         StringBuilder history = new StringBuilder();
         for (Interaction interaction : ticket.getInteractions()) {
-            history.append(interaction.getAuthorName()).append(": ").append(interaction.getMessage()).append("\\n");
+            history.append(interaction.getAuthorName()).append(": ").append(interaction.getMessage()).append("\n");
         }
         
-        String prompt = "Com base no histórico deste chamado de suporte, gere uma resposta profissional, educada e útil que o atendente de suporte poderia enviar ao cliente agora. Seja direto ao ponto. Histórico:\\n\\n" + history.toString();
+        String prompt = "Com base no histórico deste chamado de suporte, gere uma resposta profissional, educada e útil que o atendente de suporte poderia enviar ao cliente agora. Seja direto ao ponto. Histórico:\n\n" + history.toString();
         return aiService.generateContent(prompt);
     }
 
