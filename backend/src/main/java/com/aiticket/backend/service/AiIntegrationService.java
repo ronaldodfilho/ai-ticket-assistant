@@ -1,74 +1,82 @@
 package com.aiticket.backend.service;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class AiIntegrationService {
 
-    @Value("${gemini.api.key:}")
-    private String geminiApiKey;
+    private static final String GEMINI_URL =
+            "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent";
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final String apiKey;
+    private final String model;
+    private final RestTemplate restTemplate;
 
-    private static final String GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=";
+    public AiIntegrationService(@Value("${gemini.api.key:}") String apiKey,
+                                @Value("${gemini.model:gemini-2.5-flash}") String model,
+                                @Value("${gemini.timeout-seconds:30}") long timeoutSeconds) {
+        this.apiKey = apiKey;
+        this.model = model;
 
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofSeconds(10));
+        factory.setReadTimeout(Duration.ofSeconds(timeoutSeconds));
+        this.restTemplate = new RestTemplate(factory);
+    }
+
+    public boolean isEnabled() {
+        return apiKey != null && !apiKey.isBlank() && !apiKey.equals("SUA_CHAVE_AQUI");
+    }
+
+    /**
+     * Envia o prompt ao Gemini. Retorna vazio se a IA não estiver configurada
+     * ou se a chamada falhar, para que o chamador use um fallback local.
+     */
     @SuppressWarnings("unchecked")
-    public String generateContent(String prompt) {
-        if (geminiApiKey == null || geminiApiKey.isEmpty() || geminiApiKey.equals("SUA_CHAVE_AQUI")) {
-            log.warn("Gemini API Key is missing. Returning mocked AI response.");
-            return "MOCK_AI_RESPONSE: Funcionalidade de IA simulada (Configure a API Key para funcionar de verdade).";
+    public Optional<String> generateContent(String prompt) {
+        if (!isEnabled()) {
+            return Optional.empty();
         }
 
         try {
-            String url = GEMINI_URL + geminiApiKey;
-
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("x-goog-api-key", apiKey);
 
-            // Estrutura do payload da API do Gemini
             Map<String, Object> requestBody = Map.of(
-                    "contents", List.of(
-                            Map.of("parts", List.of(
-                                    Map.of("text", prompt)
-                            ))
-                    ),
-                    "generationConfig", Map.of(
-                            "temperature", 0.7,
-                            "maxOutputTokens", 800
-                    )
+                    "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))),
+                    "generationConfig", Map.of("temperature", 0.4, "maxOutputTokens", 1024)
             );
 
-            HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
+            Map<String, Object> response = restTemplate.postForObject(
+                    GEMINI_URL.formatted(model), new HttpEntity<>(requestBody, headers), Map.class);
 
-            Map<String, Object> response = restTemplate.postForObject(url, request, Map.class);
-            
-            if (response != null && response.containsKey("candidates")) {
-                List<Map<String, Object>> candidates = (List<Map<String, Object>>) response.get("candidates");
-                if (!candidates.isEmpty()) {
-                    Map<String, Object> candidate = candidates.get(0);
-                    Map<String, Object> content = (Map<String, Object>) candidate.get("content");
-                    List<Map<String, Object>> parts = (List<Map<String, Object>>) content.get("parts");
-                    if (!parts.isEmpty()) {
-                        return (String) parts.get(0).get("text");
+            if (response != null && response.get("candidates") instanceof List<?> candidates && !candidates.isEmpty()) {
+                Map<String, Object> content = (Map<String, Object>) ((Map<String, Object>) candidates.get(0)).get("content");
+                if (content != null && content.get("parts") instanceof List<?> parts && !parts.isEmpty()) {
+                    Object text = ((Map<String, Object>) parts.get(0)).get("text");
+                    if (text instanceof String s && !s.isBlank()) {
+                        return Optional.of(s.trim());
                     }
                 }
             }
-            return "Erro ao extrair resposta da IA.";
+            log.warn("Resposta do Gemini sem conteúdo utilizável: {}", response);
         } catch (Exception e) {
-            log.error("Erro ao chamar API do Gemini: ", e);
-            return "Desculpe, ocorreu um erro na integração com a IA.";
+            log.error("Erro ao chamar a API do Gemini (modelo {}): {}", model, e.getMessage());
         }
+        return Optional.empty();
     }
 }
