@@ -76,8 +76,8 @@ public class TicketService {
             history.append(interaction.getAuthorName()).append(": ").append(interaction.getMessage()).append("\n");
         }
         
-        String prompt = "Por favor, faça um resumo conciso (máximo 3 frases) do histórico deste chamado de suporte para que um novo atendente possa entender rapidamente o problema atual:\n\n" + history.toString();
-        return aiService.generateContent(prompt);
+        String prompt = "Por favor, faça um resumo conciso (máximo 3 frases) do histórico deste chamado de suporte para que um novo atendente possa entender rapidamente o problema atual:\n\n" + history;
+        return aiService.generateContent(prompt).orElseGet(() -> localSummary(ticket));
     }
 
     @Transactional
@@ -90,8 +90,36 @@ public class TicketService {
             history.append(interaction.getAuthorName()).append(": ").append(interaction.getMessage()).append("\n");
         }
         
-        String prompt = "Com base no histórico deste chamado de suporte, gere uma resposta profissional, educada e útil que o atendente de suporte poderia enviar ao cliente agora. Seja direto ao ponto. Histórico:\n\n" + history.toString();
-        return aiService.generateContent(prompt);
+        String prompt = "Com base no histórico deste chamado de suporte, gere uma resposta profissional, educada e útil que o atendente de suporte poderia enviar ao cliente agora. Seja direto ao ponto e responda apenas com o texto da mensagem. Histórico:\n\n" + history;
+        return aiService.generateContent(prompt).orElseGet(() -> localSuggestion(ticket));
+    }
+
+    private String localSummary(Ticket ticket) {
+        List<Interaction> interactions = ticket.getInteractions();
+        StringBuilder summary = new StringBuilder()
+                .append(ticket.getUserName()).append(" relatou: \"").append(ticket.getTitle()).append("\". ")
+                .append("Chamado classificado como ").append(ticket.getCategory())
+                .append(", prioridade ").append(ticket.getPriority())
+                .append(", status atual ").append(ticket.getStatus()).append(". ");
+        if (interactions.size() > 1) {
+            Interaction last = interactions.get(interactions.size() - 1);
+            summary.append("Há ").append(interactions.size()).append(" mensagens; a última, de ")
+                    .append(last.getAuthorName()).append(", diz: \"").append(abbreviate(last.getMessage(), 160)).append("\".");
+        } else {
+            summary.append("Ainda não houve resposta do suporte.");
+        }
+        return summary.toString();
+    }
+
+    private String localSuggestion(Ticket ticket) {
+        return "Olá, " + ticket.getUserName() + "! Recebemos seu chamado \"" + ticket.getTitle()
+                + "\" e ele já está com a nossa equipe de " + ticket.getDepartment()
+                + ". Estamos analisando o caso e retornaremos em breve com uma solução. "
+                + "Se puder, envie prints ou mais detalhes que ajudem a reproduzir o problema.";
+    }
+
+    private static String abbreviate(String text, int max) {
+        return text.length() <= max ? text : text.substring(0, max - 1) + "…";
     }
 
     public TicketResponseDto mapToResponseDto(Ticket ticket) {

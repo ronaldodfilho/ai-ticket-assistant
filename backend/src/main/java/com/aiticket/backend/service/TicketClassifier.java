@@ -37,15 +37,14 @@ public class TicketClassifier {
                 Opções de SETOR: SUPORTE_N1, SUPORTE_ERP, INFRAESTRUTURA, RH, FINANCEIRO.
                 """.formatted(title, description);
 
-        try {
-            return parse(aiService.generateContent(prompt)).orElseGet(() -> {
-                log.warn("Resposta de classificação da IA não reconhecida, usando padrão.");
-                return TicketClassification.DEFAULT;
-            });
-        } catch (Exception e) {
-            log.error("Erro na classificação da IA, usando padrão.", e);
-            return TicketClassification.DEFAULT;
+        if (aiService.isEnabled()) {
+            Optional<TicketClassification> fromAi = aiService.generateContent(prompt).flatMap(TicketClassifier::parse);
+            if (fromAi.isPresent()) {
+                return fromAi.get();
+            }
+            log.warn("Classificação da IA indisponível ou não reconhecida, usando classificação por palavras-chave.");
         }
+        return KeywordClassifier.classify(title, description);
     }
 
     static Optional<TicketClassification> parse(String aiResponse) {
