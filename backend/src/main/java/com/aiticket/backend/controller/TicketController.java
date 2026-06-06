@@ -4,6 +4,7 @@ import com.aiticket.backend.dto.InteractionCreateDto;
 import com.aiticket.backend.dto.InteractionResponseDto;
 import com.aiticket.backend.dto.TicketCreateDto;
 import com.aiticket.backend.dto.TicketResponseDto;
+import com.aiticket.backend.dto.TicketStatusUpdateDto;
 import com.aiticket.backend.service.InteractionService;
 import com.aiticket.backend.service.TicketService;
 import jakarta.validation.Valid;
@@ -37,6 +38,11 @@ public class TicketController {
     @GetMapping("/{id}")
     public TicketResponseDto getTicket(@PathVariable UUID id) {
         return ticketService.getTicket(id);
+    }
+
+    @PatchMapping("/{id}/status")
+    public TicketResponseDto updateStatus(@PathVariable UUID id, @Valid @RequestBody TicketStatusUpdateDto dto) {
+        return ticketService.updateStatus(id, dto.status());
     }
 
     @GetMapping("/{id}/interactions")

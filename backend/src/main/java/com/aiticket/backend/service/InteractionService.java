@@ -4,6 +4,9 @@ import com.aiticket.backend.domain.entity.Interaction;
 import com.aiticket.backend.domain.entity.Ticket;
 import com.aiticket.backend.dto.InteractionCreateDto;
 import com.aiticket.backend.dto.InteractionResponseDto;
+import com.aiticket.backend.domain.enums.InteractionAuthor;
+import com.aiticket.backend.domain.enums.TicketStatus;
+import com.aiticket.backend.exception.ResourceNotFoundException;
 import com.aiticket.backend.repository.InteractionRepository;
 import com.aiticket.backend.repository.TicketRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +27,7 @@ public class InteractionService {
     @Transactional
     public InteractionResponseDto addInteraction(UUID ticketId, InteractionCreateDto dto) {
         Ticket ticket = ticketRepository.findById(ticketId)
-                .orElseThrow(() -> new RuntimeException("Ticket not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Chamado não encontrado: " + ticketId));
 
         Interaction interaction = Interaction.builder()
                 .ticket(ticket)
@@ -33,12 +36,21 @@ public class InteractionService {
                 .message(dto.message())
                 .build();
 
-        Interaction savedInteraction = interactionRepository.save(interaction);
+        // A primeira resposta do atendente coloca o chamado em andamento
+        if (dto.author() == InteractionAuthor.ATTENDANT && ticket.getStatus() == TicketStatus.ABERTO) {
+            ticket.setStatus(TicketStatus.EM_ANDAMENTO);
+        }
+        ticket.getInteractions().add(interaction);
+
+        Interaction savedInteraction = interactionRepository.saveAndFlush(interaction);
         return mapToResponseDto(savedInteraction);
     }
 
     @Transactional(readOnly = true)
     public List<InteractionResponseDto> getInteractionsByTicketId(UUID ticketId) {
+        if (!ticketRepository.existsById(ticketId)) {
+            throw new ResourceNotFoundException("Chamado não encontrado: " + ticketId);
+        }
         return interactionRepository.findByTicketIdOrderByCreatedAtAsc(ticketId).stream()
                 .map(this::mapToResponseDto)
                 .collect(Collectors.toList());

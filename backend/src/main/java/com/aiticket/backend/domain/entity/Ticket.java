@@ -49,6 +49,7 @@ public class Ticket {
     private String userName; // Mocked user who opened the ticket
 
     @OneToMany(mappedBy = "ticket", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("createdAt ASC")
     @Builder.Default
     private List<Interaction> interactions = new ArrayList<>();
 
