@@ -6,6 +6,7 @@ import com.aiticket.backend.domain.enums.InteractionAuthor;
 import com.aiticket.backend.domain.enums.TicketStatus;
 import com.aiticket.backend.dto.TicketCreateDto;
 import com.aiticket.backend.dto.TicketResponseDto;
+import com.aiticket.backend.exception.ResourceNotFoundException;
 import com.aiticket.backend.repository.TicketRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -48,13 +49,13 @@ public class TicketService {
         ticket.setPriority(classification.priority());
         ticket.setDepartment(classification.department());
 
-        Ticket savedTicket = ticketRepository.save(ticket);
+        Ticket savedTicket = ticketRepository.saveAndFlush(ticket);
         return mapToResponseDto(savedTicket);
     }
 
     @Transactional(readOnly = true)
     public List<TicketResponseDto> getAllTickets() {
-        return ticketRepository.findAll().stream()
+        return ticketRepository.findAllByOrderByCreatedAtDesc().stream()
                 .map(this::mapToResponseDto)
                 .collect(Collectors.toList());
     }
@@ -62,14 +63,22 @@ public class TicketService {
     @Transactional(readOnly = true)
     public TicketResponseDto getTicket(UUID id) {
         Ticket ticket = ticketRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ticket not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Chamado não encontrado: " + id));
         return mapToResponseDto(ticket);
     }
 
     @Transactional
+    public TicketResponseDto updateStatus(UUID id, TicketStatus status) {
+        Ticket ticket = ticketRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Chamado não encontrado: " + id));
+        ticket.setStatus(status);
+        return mapToResponseDto(ticketRepository.saveAndFlush(ticket));
+    }
+
+    @Transactional(readOnly = true)
     public String summarizeTicket(UUID id) {
         Ticket ticket = ticketRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ticket not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Chamado não encontrado: " + id));
         
         StringBuilder history = new StringBuilder();
         for (Interaction interaction : ticket.getInteractions()) {
@@ -80,10 +89,10 @@ public class TicketService {
         return aiService.generateContent(prompt).orElseGet(() -> localSummary(ticket));
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public String suggestResponse(UUID id) {
         Ticket ticket = ticketRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ticket not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Chamado não encontrado: " + id));
         
         StringBuilder history = new StringBuilder();
         for (Interaction interaction : ticket.getInteractions()) {
