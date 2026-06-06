@@ -107,9 +107,9 @@ public class TicketService {
         List<Interaction> interactions = ticket.getInteractions();
         StringBuilder summary = new StringBuilder()
                 .append(ticket.getUserName()).append(" relatou: \"").append(ticket.getTitle()).append("\". ")
-                .append("Chamado classificado como ").append(ticket.getCategory())
-                .append(", prioridade ").append(ticket.getPriority())
-                .append(", status atual ").append(ticket.getStatus()).append(". ");
+                .append("Chamado classificado como ").append(humanize(ticket.getCategory()))
+                .append(", prioridade ").append(humanize(ticket.getPriority()))
+                .append(", status atual ").append(humanize(ticket.getStatus())).append(". ");
         if (interactions.size() > 1) {
             Interaction last = interactions.get(interactions.size() - 1);
             summary.append("Há ").append(interactions.size()).append(" mensagens; a última, de ")
@@ -122,9 +122,21 @@ public class TicketService {
 
     private String localSuggestion(Ticket ticket) {
         return "Olá, " + ticket.getUserName() + "! Recebemos seu chamado \"" + ticket.getTitle()
-                + "\" e ele já está com a nossa equipe de " + ticket.getDepartment()
+                + "\" e ele já está com a nossa equipe de " + humanize(ticket.getDepartment())
                 + ". Estamos analisando o caso e retornaremos em breve com uma solução. "
                 + "Se puder, envie prints ou mais detalhes que ajudem a reproduzir o problema.";
+    }
+
+    private static String humanize(Object value) {
+        if (value == null) {
+            return "—";
+        }
+        String text = value.toString();
+        return switch (text) {
+            case "TI", "RH", "SUPORTE_N1", "SUPORTE_ERP" -> text.replace("_", " ").replace("SUPORTE", "Suporte");
+            case "MEDIA" -> "média";
+            default -> text.replace("_", " ").toLowerCase(java.util.Locale.ROOT);
+        };
     }
 
     private static String abbreviate(String text, int max) {
