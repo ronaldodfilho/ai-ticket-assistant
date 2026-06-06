@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { useTicketStore } from '../store/ticketStore';
 import { Loader2, CheckCircle2, Send } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { getErrorMessage } from '../api/axios';
+import type { Ticket } from '../store/ticketStore';
+import { categoryLabel, departmentLabel, label, priorityLabel } from '../lib/labels';
 import { motion } from 'framer-motion';
 
 export default function Portal() {
@@ -8,27 +12,29 @@ export default function Portal() {
     const [description, setDescription] = useState('');
     const [userName, setUserName] = useState('');
     const [loading, setLoading] = useState(false);
-    const [success, setSuccess] = useState(false);
+    const [created, setCreated] = useState<Ticket | null>(null);
+    const [error, setError] = useState<string | null>(null);
     
     const { createTicket } = useTicketStore();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
+        setError(null);
         try {
-            await createTicket({ title, description, userName: userName || 'Cliente Anônimo' });
-            setSuccess(true);
+            const ticket = await createTicket({ title, description, userName: userName || 'Cliente Anônimo' });
+            setCreated(ticket);
             setTitle('');
             setDescription('');
-        } catch (error) {
-            console.error(error);
-            alert("Erro ao criar chamado.");
+        } catch (err) {
+            console.error(err);
+            setError(getErrorMessage(err, 'Erro ao criar chamado. Tente novamente.'));
         } finally {
             setLoading(false);
         }
     };
 
-    if (success) {
+    if (created) {
         return (
             <div className="flex-1 flex items-center justify-center p-6">
                 <motion.div 
@@ -40,20 +46,34 @@ export default function Portal() {
                         <CheckCircle2 size={32} />
                     </div>
                     <h2 className="text-2xl font-bold text-slate-800 mb-2">Chamado Aberto!</h2>
-                    <p className="text-slate-600 mb-8">Nossa inteligência artificial já classificou seu chamado e a equipe responsável será notificada em breve.</p>
-                    <button 
-                        onClick={() => setSuccess(false)}
-                        className="w-full py-3 px-4 bg-brand-50 text-brand-700 hover:bg-brand-100 font-medium rounded-xl transition-colors"
-                    >
-                        Abrir Novo Chamado
-                    </button>
+                    <p className="text-slate-600 mb-6">Seu chamado foi classificado automaticamente e encaminhado para a equipe responsável.</p>
+                    <div className="grid grid-cols-3 gap-3 mb-8 text-left">
+                        <Info title="Categoria" value={label(categoryLabel, created.category)} />
+                        <Info title="Prioridade" value={label(priorityLabel, created.priority)} />
+                        <Info title="Setor" value={label(departmentLabel, created.department)} />
+                    </div>
+                    <p className="text-xs text-slate-400 font-mono mb-6">Protocolo #{created.id.substring(0, 8)}</p>
+                    <div className="flex flex-col gap-3">
+                        <Link
+                            to={`/tickets/${created.id}`}
+                            className="w-full py-3 px-4 bg-brand-600 text-white hover:bg-brand-700 font-medium rounded-xl transition-colors"
+                        >
+                            Acompanhar Chamado
+                        </Link>
+                        <button
+                            onClick={() => setCreated(null)}
+                            className="w-full py-3 px-4 bg-brand-50 text-brand-700 hover:bg-brand-100 font-medium rounded-xl transition-colors"
+                        >
+                            Abrir Novo Chamado
+                        </button>
+                    </div>
                 </motion.div>
             </div>
         );
     }
 
     return (
-        <div className="flex-1 flex items-center justify-center p-6 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-slate-50/50">
+        <div className="flex-1 flex items-center justify-center p-6">
             <motion.div 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -98,6 +118,9 @@ export default function Portal() {
                             className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none resize-none"
                         />
                     </div>
+                    {error && (
+                        <div className="px-4 py-3 rounded-xl bg-red-50 text-red-700 text-sm">{error}</div>
+                    )}
                     <button 
                         type="submit" 
                         disabled={loading}
@@ -108,6 +131,15 @@ export default function Portal() {
                     </button>
                 </form>
             </motion.div>
+        </div>
+    );
+}
+
+function Info({ title, value }: { title: string; value: string }) {
+    return (
+        <div className="bg-slate-50 rounded-xl p-3">
+            <p className="text-[11px] text-slate-500 mb-0.5">{title}</p>
+            <p className="text-sm font-semibold text-slate-800">{value}</p>
         </div>
     );
 }
