@@ -1,96 +1,179 @@
 # 🤖 AI Ticket Assistant
 
-Um sistema de suporte inteligente (Help Desk) que utiliza a Inteligência Artificial do Google Gemini para triagem, classificação automática de chamados, resumo de histórico e sugestão de respostas para os atendentes.
+Sistema de Help Desk com triagem inteligente de chamados. Cada chamado aberto é classificado automaticamente em **categoria**, **prioridade** e **setor responsável**, e o atendente conta com **resumo do histórico** e **sugestão de resposta** gerados por IA (Google Gemini).
 
-## 🚀 Tecnologias
+O projeto funciona **com ou sem chave de API**: sem a chave, a classificação é feita por palavras-chave e o resumo e a sugestão usam modelos locais. Assim dá para rodar e testar tudo sem configurar nada.
 
-Este projeto é dividido em duas partes principais: um backend robusto construído com Java e um frontend moderno feito com React.
-
-### Backend
-* **Java 21**
-* **Spring Boot 3**
-* **Spring Data JPA & Hibernate**
-* **Banco de Dados:** H2 Database (em memória para dev) / PostgreSQL (produção via Docker)
-* **Integração de IA:** Google Gemini API (modelo `gemini-1.5-flash`)
-* **Lombok & Validation**
-
-### Frontend
-* **React 19**
-* **TypeScript**
-* **Vite**
-* **Tailwind CSS v4** (Estilização premium, com temas customizados)
-* **Zustand** (Gerenciamento de estado leve e rápido)
-* **Axios** (Integração com API)
-* **Lucide React & Framer Motion** (Ícones e Animações)
+---
 
 ## ✨ Funcionalidades
 
-1. **Abertura de Chamados (Portal do Cliente):** Os usuários podem relatar problemas. O sistema automaticamente utiliza a IA para classificar a **Categoria**, a **Prioridade** e o **Setor** responsável pelo ticket baseado na descrição.
-2. **Dashboard do Atendente:** Visão geral de métricas (Total de chamados, abertos, em andamento, resolvidos) e uma tabela com os chamados recentes.
-3. **Detalhes do Chamado & Chat:** Visualização de toda a conversa entre cliente e suporte.
-4. **Resumo Inteligente:** A IA do Gemini resume o histórico completo de interações em até 3 frases para economizar tempo do atendente.
-5. **Sugestão de Resposta:** A IA analisa todo o contexto do ticket e escreve uma sugestão profissional de resposta para o atendente enviar ao cliente.
+| Tela | O que faz |
+|---|---|
+| **Portal do Cliente** (`/`) | Abertura de chamados. Ao enviar, mostra a classificação recebida e o protocolo, com link para acompanhar o chamado. |
+| **Dashboard** (`/dashboard`) | Métricas (total, abertos, em andamento, resolvidos), lista dos chamados mais recentes, busca por título ou solicitante e filtro por status. |
+| **Detalhe do Chamado** (`/tickets/:id`) | Conversa entre cliente e suporte, alteração de status, resumo do histórico e sugestão de resposta. |
 
-## ⚙️ Como executar o projeto localmente
+**Regras de negócio**
+- Chamados novos começam como `ABERTO`.
+- A primeira resposta de um atendente move o chamado para `EM_ANDAMENTO`.
+- O status pode ser alterado manualmente para `ABERTO`, `EM_ANDAMENTO`, `RESOLVIDO` ou `FECHADO`.
+
+**Classificação**
+- Categorias: `FISCAL`, `TI`, `RH`, `FINANCEIRO`, `SISTEMA`, `OUTROS`
+- Prioridades: `BAIXA`, `MEDIA`, `ALTA`, `URGENTE`
+- Setores: `SUPORTE_N1`, `SUPORTE_ERP`, `INFRAESTRUTURA`, `RH`, `FINANCEIRO`
+
+Com a chave do Gemini configurada, a IA faz a classificação. Se a resposta da IA vier fora do formato, ou se a chamada falhar, o sistema usa a classificação por palavras-chave automaticamente.
+
+---
+
+## 🚀 Tecnologias
+
+**Backend**: Java 21, Spring Boot 4, Spring Data JPA, Bean Validation, Lombok, H2 (dev) / PostgreSQL, Google Gemini API (`gemini-2.5-flash`)
+
+**Frontend**: React 19, TypeScript, Vite, Tailwind CSS v4, Zustand, Axios, React Router, Lucide React, Framer Motion, date-fns
+
+---
+
+## ⚙️ Como executar
 
 ### Pré-requisitos
-* Java 21 instalado
-* Node.js v18+ instalado
-* Chave de API do Google Gemini (pegue a sua no [Google AI Studio](https://aistudio.google.com/app/apikey))
+- Java 21
+- Node.js 20+
+- (Opcional) chave do Google Gemini, obtida no [Google AI Studio](https://aistudio.google.com/app/apikey)
 
-### Configuração da API Key
-Abra o arquivo `backend/src/main/resources/application.properties` e adicione sua chave de API válida (iniciada com `AIza...`):
-```properties
-gemini.api.key=SUA_CHAVE_AQUI
-```
+### 1. Backend
 
-### 1. Rodando o Backend (Spring Boot)
-Abra um terminal na pasta raiz do projeto e navegue até o diretório `backend`:
 ```bash
 cd backend
+```
 
-# No Windows (usando o Maven Wrapper)
-.\mvnw.cmd spring-boot:run
-
-# No Linux/Mac
+```bash
 ./mvnw spring-boot:run
 ```
-O backend estará rodando em `http://localhost:8080`.
 
-### 2. Rodando o Frontend (React + Vite)
-Abra um segundo terminal na pasta raiz do projeto e navegue até o diretório `frontend`:
+No Windows, use `.\mvnw.cmd spring-boot:run`. A API sobe em `http://localhost:8080`.
+
+Para ativar a IA, defina a variável de ambiente antes de iniciar:
+
+```bash
+export GEMINI_API_KEY=sua_chave_aqui
+```
+
+### 2. Frontend
+
 ```bash
 cd frontend
+```
 
-# Instalar as dependências
+```bash
 npm install
+```
 
-# Iniciar o servidor de desenvolvimento
+```bash
 npm run dev
 ```
-O frontend estará acessível no navegador na porta indicada no terminal (geralmente `http://localhost:5173` ou `http://localhost:5174`).
 
-## 🐳 Executando com Docker (PostgreSQL)
+Acesse `http://localhost:5173`. Em desenvolvimento, o Vite encaminha as chamadas de `/api` para o backend, então não é preciso configurar CORS nem URL da API.
 
-O projeto também possui um `docker-compose.yml` pré-configurado na raiz para levantar um banco de dados PostgreSQL.
+### Testes
+
 ```bash
-docker-compose up -d
-```
-> *Nota:* Para utilizar o PostgreSQL em vez do H2, ajuste a configuração no `application.properties` (trocando a URL do datasource, driver e credenciais).
-
-## 📄 Estrutura de Pastas
-```text
-.
-├── backend/                  # API REST em Spring Boot
-│   ├── src/main/java/        # Código fonte Java
-│   └── src/main/resources/   # Propriedades e configurações
-├── frontend/                 # Interface React Vite
-│   ├── src/pages/            # Telas da aplicação (Dashboard, Portal, Ticket)
-│   ├── src/store/            # Estado global (Zustand)
-│   └── src/api/              # Configuração do Axios
-└── docker-compose.yml        # Infraestrutura do banco de dados (Prod/Staging)
+cd backend && ./mvnw test
 ```
 
-## 👨‍💻 Autor
+```bash
+cd frontend && npm run lint && npm run build
+```
 
-Desenvolvido com 🩵 e ☕ durante a exploração de novas tecnologias de IA e frameworks modernos de desenvolvimento web.
+---
+
+## 🔧 Configuração
+
+### Backend (variáveis de ambiente)
+
+| Variável | Padrão | Descrição |
+|---|---|---|
+| `GEMINI_API_KEY` | *(vazio)* | Chave do Gemini. Sem ela, o sistema usa o modo local. |
+| `GEMINI_MODEL` | `gemini-2.5-flash` | Modelo do Gemini utilizado. |
+| `PORT` | `8080` | Porta HTTP da API. |
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:*,http://127.0.0.1:*` | Origens permitidas, separadas por vírgula. |
+
+### Frontend
+
+| Variável | Padrão | Descrição |
+|---|---|---|
+| `VITE_API_URL` | `/api` | URL da API usada pelo build de produção. |
+| `BACKEND_URL` | `http://localhost:8080` | Destino do proxy `/api` no servidor de desenvolvimento. |
+
+### Banco de dados
+
+Por padrão o backend usa **H2 em memória**: os dados são apagados ao reiniciar. O console fica em `http://localhost:8080/h2-console` (JDBC URL `jdbc:h2:mem:aiticket_db`, usuário `sa`, senha `password`).
+
+Para usar **PostgreSQL**, suba o banco com o `docker-compose.yml` da raiz:
+
+```bash
+docker compose up -d
+```
+
+Depois inicie o backend apontando para ele:
+
+```bash
+SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/aiticket_db \
+SPRING_DATASOURCE_USERNAME=aiticket \
+SPRING_DATASOURCE_PASSWORD=password \
+SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver \
+SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.PostgreSQLDialect \
+./mvnw spring-boot:run
+```
+
+---
+
+## 📡 API
+
+Base: `http://localhost:8080/api`
+
+| Método | Rota | Descrição |
+|---|---|---|
+| `POST` | `/tickets` | Cria e classifica um chamado. Corpo: `{ "title", "description", "userName" }` |
+| `GET` | `/tickets` | Lista os chamados (mais recentes primeiro) |
+| `GET` | `/tickets/{id}` | Detalhes de um chamado |
+| `PATCH` | `/tickets/{id}/status` | Altera o status. Corpo: `{ "status": "RESOLVIDO" }` |
+| `GET` | `/tickets/{id}/interactions` | Histórico de mensagens |
+| `POST` | `/tickets/{id}/interactions` | Adiciona mensagem. Corpo: `{ "message", "author": "USER" \| "ATTENDANT", "authorName" }` |
+| `GET` | `/tickets/{id}/summary` | Resumo do histórico |
+| `GET` | `/tickets/{id}/suggest-response` | Sugestão de resposta para o atendente |
+| `GET` | `/dashboard/stats` | Contagem de chamados por status |
+
+Os erros seguem o formato [Problem Details (RFC 9457)](https://www.rfc-editor.org/rfc/rfc9457): `404` para chamado inexistente e `400` para dados inválidos.
+
+Exemplo:
+
+```bash
+curl -X POST http://localhost:8080/api/tickets \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"Erro ao emitir NF-e","description":"A SEFAZ rejeita a nota, faturamento parado","userName":"Maria"}'
+```
+
+---
+
+## 📁 Estrutura
+
+```
+backend/
+  src/main/java/com/aiticket/backend/
+    config/       CORS
+    controller/   Endpoints REST
+    domain/       Entidades JPA e enums
+    dto/          Objetos de entrada e saída
+    exception/    Tratamento de erros
+    repository/   Repositórios Spring Data
+    service/      Regras de negócio, integração com o Gemini e classificadores
+frontend/
+  src/
+    api/          Cliente HTTP
+    lib/          Rótulos e cores dos enums
+    pages/        Portal, Dashboard e Detalhe do Chamado
+    store/        Estado global (Zustand)
+```
