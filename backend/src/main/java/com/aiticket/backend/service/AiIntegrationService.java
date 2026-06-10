@@ -26,7 +26,7 @@ public class AiIntegrationService {
     private final RestTemplate restTemplate;
 
     public AiIntegrationService(@Value("${gemini.api.key:}") String apiKey,
-                                @Value("${gemini.model:gemini-2.5-flash}") String model,
+                                @Value("${gemini.model:gemini-flash-latest}") String model,
                                 @Value("${gemini.timeout-seconds:30}") long timeoutSeconds) {
         this.apiKey = apiKey;
         this.model = model;
@@ -35,6 +35,16 @@ public class AiIntegrationService {
         factory.setConnectTimeout(Duration.ofSeconds(10));
         factory.setReadTimeout(Duration.ofSeconds(timeoutSeconds));
         this.restTemplate = new RestTemplate(factory);
+
+        if (isEnabled()) {
+            log.info("IA ativa com o modelo {}.", model);
+        } else {
+            log.info("GEMINI_API_KEY não definida: usando classificação, resumo e sugestão locais.");
+        }
+    }
+
+    public String getModel() {
+        return model;
     }
 
     public boolean isEnabled() {
@@ -58,7 +68,7 @@ public class AiIntegrationService {
 
             Map<String, Object> requestBody = Map.of(
                     "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))),
-                    "generationConfig", Map.of("temperature", 0.4, "maxOutputTokens", 1024)
+                    "generationConfig", Map.of("temperature", 0.4, "maxOutputTokens", 2048)
             );
 
             Map<String, Object> response = restTemplate.postForObject(
@@ -73,10 +83,18 @@ public class AiIntegrationService {
                     }
                 }
             }
-            log.warn("Resposta do Gemini sem conteúdo utilizável: {}", response);
+            log.warn("Resposta do Gemini sem texto utilizável (finishReason: {}).", extractFinishReason(response));
         } catch (Exception e) {
             log.error("Erro ao chamar a API do Gemini (modelo {}): {}", model, e.getMessage());
         }
         return Optional.empty();
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Object extractFinishReason(Map<String, Object> response) {
+        if (response != null && response.get("candidates") instanceof List<?> candidates && !candidates.isEmpty()) {
+            return ((Map<String, Object>) candidates.get(0)).get("finishReason");
+        }
+        return response == null ? null : response.get("promptFeedback");
     }
 }

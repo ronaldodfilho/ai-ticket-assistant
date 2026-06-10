@@ -1,11 +1,12 @@
 package com.aiticket.backend.dto;
 
 import com.aiticket.backend.domain.enums.TicketCategory;
+import com.aiticket.backend.domain.enums.TicketDepartment;
 import com.aiticket.backend.domain.enums.TicketPriority;
 import com.aiticket.backend.domain.enums.TicketStatus;
 import lombok.Builder;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Builder
@@ -16,8 +17,8 @@ public record TicketResponseDto(
         TicketCategory category,
         TicketPriority priority,
         TicketStatus status,
-        String department,
+        TicketDepartment department,
         String userName,
-        LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        Instant createdAt,
+        Instant updatedAt
 ) {}

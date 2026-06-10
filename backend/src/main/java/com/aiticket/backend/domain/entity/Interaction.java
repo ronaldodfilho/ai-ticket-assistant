@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -30,12 +30,12 @@ public class Interaction {
     private InteractionAuthor author;
 
     @Column(name = "author_name")
-    private String authorName; // e.g. "João (Suporte)", "Maria (Cliente)", "AI Assistant"
+    private String authorName;
 
     @Column(columnDefinition = "TEXT", nullable = false)
     private String message;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 }

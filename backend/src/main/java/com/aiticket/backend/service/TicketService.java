@@ -4,106 +4,145 @@ import com.aiticket.backend.domain.entity.Interaction;
 import com.aiticket.backend.domain.entity.Ticket;
 import com.aiticket.backend.domain.enums.InteractionAuthor;
 import com.aiticket.backend.domain.enums.TicketStatus;
+import com.aiticket.backend.dto.TicketClassificationUpdateDto;
 import com.aiticket.backend.dto.TicketCreateDto;
 import com.aiticket.backend.dto.TicketResponseDto;
 import com.aiticket.backend.exception.ResourceNotFoundException;
 import com.aiticket.backend.repository.TicketRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class TicketService {
+
+    static final String DEFAULT_USER_NAME = "Cliente";
 
     private final TicketRepository ticketRepository;
     private final AiIntegrationService aiService;
     private final TicketClassifier classifier;
 
-    @Transactional
+    /**
+     * Sem @Transactional de propósito: a classificação pode chamar a IA e levar alguns
+     * segundos, e não faz sentido manter uma transação aberta durante a chamada HTTP.
+     * O save abaixo roda na própria transação do repositório.
+     */
     public TicketResponseDto createTicket(TicketCreateDto dto) {
+        String title = dto.title().trim();
+        String description = dto.description().trim();
+        String userName = dto.userName() == null || dto.userName().isBlank() ? DEFAULT_USER_NAME : dto.userName().trim();
+
+        TicketClassification classification = classifier.classify(title, description);
+
         Ticket ticket = Ticket.builder()
-                .title(dto.title())
-                .description(dto.description())
-                .userName(dto.userName() != null ? dto.userName() : "Anonymous User")
+                .title(title)
+                .description(description)
+                .userName(userName)
                 .status(TicketStatus.ABERTO)
+                .category(classification.category())
+                .priority(classification.priority())
+                .department(classification.department())
                 .build();
 
-        Interaction initialInteraction = Interaction.builder()
+        ticket.getInteractions().add(Interaction.builder()
                 .ticket(ticket)
                 .author(InteractionAuthor.USER)
-                .authorName(ticket.getUserName())
-                .message(dto.description())
-                .build();
+                .authorName(userName)
+                .message(description)
+                .build());
 
-        ticket.getInteractions().add(initialInteraction);
-
-        TicketClassification classification = classifier.classify(dto.title(), dto.description());
-        ticket.setCategory(classification.category());
-        ticket.setPriority(classification.priority());
-        ticket.setDepartment(classification.department());
-
-        Ticket savedTicket = ticketRepository.saveAndFlush(ticket);
-        return mapToResponseDto(savedTicket);
+        return mapToResponseDto(ticketRepository.saveAndFlush(ticket));
     }
 
     @Transactional(readOnly = true)
     public List<TicketResponseDto> getAllTickets() {
         return ticketRepository.findAllByOrderByCreatedAtDesc().stream()
-                .map(this::mapToResponseDto)
-                .collect(Collectors.toList());
+                .map(TicketService::mapToResponseDto)
+                .toList();
     }
 
     @Transactional(readOnly = true)
     public TicketResponseDto getTicket(UUID id) {
-        Ticket ticket = ticketRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Chamado não encontrado: " + id));
-        return mapToResponseDto(ticket);
+        return mapToResponseDto(findTicket(id));
     }
 
     @Transactional
     public TicketResponseDto updateStatus(UUID id, TicketStatus status) {
-        Ticket ticket = ticketRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Chamado não encontrado: " + id));
+        Ticket ticket = findTicket(id);
         ticket.setStatus(status);
         return mapToResponseDto(ticketRepository.saveAndFlush(ticket));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
+    public TicketResponseDto updateClassification(UUID id, TicketClassificationUpdateDto dto) {
+        Ticket ticket = findTicket(id);
+        ticket.setCategory(dto.category());
+        ticket.setPriority(dto.priority());
+        ticket.setDepartment(dto.department());
+        return mapToResponseDto(ticketRepository.saveAndFlush(ticket));
+    }
+
     public String summarizeTicket(UUID id) {
-        Ticket ticket = ticketRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Chamado não encontrado: " + id));
-        
-        StringBuilder history = new StringBuilder();
-        for (Interaction interaction : ticket.getInteractions()) {
-            history.append(interaction.getAuthorName()).append(": ").append(interaction.getMessage()).append("\n");
-        }
-        
-        String prompt = "Por favor, faça um resumo conciso (máximo 3 frases) do histórico deste chamado de suporte para que um novo atendente possa entender rapidamente o problema atual:\n\n" + history;
+        Ticket ticket = loadWithHistory(id);
+        String prompt = """
+                Faça um resumo conciso, em no máximo 3 frases, do histórico deste chamado de suporte,
+                para que um novo atendente entenda rapidamente o problema e a situação atual.
+                Responda apenas com o resumo, em português.
+
+                Título: %s
+                Status: %s
+
+                Histórico:
+                %s""".formatted(ticket.getTitle(), humanize(ticket.getStatus()), formatHistory(ticket));
         return aiService.generateContent(prompt).orElseGet(() -> localSummary(ticket));
     }
 
-    @Transactional(readOnly = true)
     public String suggestResponse(UUID id) {
-        Ticket ticket = ticketRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Chamado não encontrado: " + id));
-        
-        StringBuilder history = new StringBuilder();
-        for (Interaction interaction : ticket.getInteractions()) {
-            history.append(interaction.getAuthorName()).append(": ").append(interaction.getMessage()).append("\n");
-        }
-        
-        String prompt = "Com base no histórico deste chamado de suporte, gere uma resposta profissional, educada e útil que o atendente de suporte poderia enviar ao cliente agora. Seja direto ao ponto e responda apenas com o texto da mensagem. Histórico:\n\n" + history;
+        Ticket ticket = loadWithHistory(id);
+        String prompt = """
+                Você é um atendente de suporte. Com base no histórico abaixo, escreva a próxima mensagem
+                para o cliente: profissional, educada, útil e direta. Responda apenas com o texto da
+                mensagem, em português, sem assinatura.
+
+                Título: %s
+
+                Histórico:
+                %s""".formatted(ticket.getTitle(), formatHistory(ticket));
         return aiService.generateContent(prompt).orElseGet(() -> localSuggestion(ticket));
     }
 
-    private String localSummary(Ticket ticket) {
+    /** Carrega o chamado e o histórico numa transação curta, antes de chamar a IA. */
+    private Ticket loadWithHistory(UUID id) {
+        Ticket ticket = ticketRepository.findWithInteractionsById(id)
+                .orElseThrow(() -> notFound(id));
+        ticket.getInteractions().size();
+        return ticket;
+    }
+
+    private Ticket findTicket(UUID id) {
+        return ticketRepository.findById(id).orElseThrow(() -> notFound(id));
+    }
+
+    private static ResourceNotFoundException notFound(UUID id) {
+        return new ResourceNotFoundException("Chamado não encontrado: " + id);
+    }
+
+    private static String formatHistory(Ticket ticket) {
+        StringBuilder history = new StringBuilder();
+        for (Interaction interaction : ticket.getInteractions()) {
+            String role = interaction.getAuthor() == InteractionAuthor.USER ? "Cliente" : "Suporte";
+            history.append("[").append(role).append("] ").append(interaction.getAuthorName())
+                    .append(": ").append(interaction.getMessage()).append("\n");
+        }
+        return history.toString();
+    }
+
+    private static String localSummary(Ticket ticket) {
         List<Interaction> interactions = ticket.getInteractions();
         StringBuilder summary = new StringBuilder()
                 .append(ticket.getUserName()).append(" relatou: \"").append(ticket.getTitle()).append("\". ")
@@ -111,8 +150,8 @@ public class TicketService {
                 .append(", prioridade ").append(humanize(ticket.getPriority()))
                 .append(", status atual ").append(humanize(ticket.getStatus())).append(". ");
         if (interactions.size() > 1) {
-            Interaction last = interactions.get(interactions.size() - 1);
-            summary.append("Há ").append(interactions.size()).append(" mensagens; a última, de ")
+            Interaction last = interactions.getLast();
+            summary.append("São ").append(interactions.size()).append(" mensagens; a última, de ")
                     .append(last.getAuthorName()).append(", diz: \"").append(abbreviate(last.getMessage(), 160)).append("\".");
         } else {
             summary.append("Ainda não houve resposta do suporte.");
@@ -120,22 +159,24 @@ public class TicketService {
         return summary.toString();
     }
 
-    private String localSuggestion(Ticket ticket) {
+    private static String localSuggestion(Ticket ticket) {
         return "Olá, " + ticket.getUserName() + "! Recebemos seu chamado \"" + ticket.getTitle()
                 + "\" e ele já está com a nossa equipe de " + humanize(ticket.getDepartment())
                 + ". Estamos analisando o caso e retornaremos em breve com uma solução. "
                 + "Se puder, envie prints ou mais detalhes que ajudem a reproduzir o problema.";
     }
 
-    private static String humanize(Object value) {
+    static String humanize(Object value) {
         if (value == null) {
             return "—";
         }
-        String text = value.toString();
-        return switch (text) {
-            case "TI", "RH", "SUPORTE_N1", "SUPORTE_ERP" -> text.replace("_", " ").replace("SUPORTE", "Suporte");
+        return switch (value.toString()) {
+            case "TI" -> "TI";
+            case "RH" -> "RH";
+            case "SUPORTE_N1" -> "Suporte N1";
+            case "SUPORTE_ERP" -> "Suporte ERP";
             case "MEDIA" -> "média";
-            default -> text.replace("_", " ").toLowerCase(java.util.Locale.ROOT);
+            default -> value.toString().replace("_", " ").toLowerCase(Locale.ROOT);
         };
     }
 
@@ -143,7 +184,7 @@ public class TicketService {
         return text.length() <= max ? text : text.substring(0, max - 1) + "…";
     }
 
-    public TicketResponseDto mapToResponseDto(Ticket ticket) {
+    static TicketResponseDto mapToResponseDto(Ticket ticket) {
         return TicketResponseDto.builder()
                 .id(ticket.getId())
                 .title(ticket.getTitle())

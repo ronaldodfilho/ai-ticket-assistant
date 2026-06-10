@@ -1,6 +1,7 @@
 package com.aiticket.backend.service;
 
 import com.aiticket.backend.domain.enums.TicketCategory;
+import com.aiticket.backend.domain.enums.TicketDepartment;
 import com.aiticket.backend.domain.enums.TicketPriority;
 
 import java.util.List;
@@ -13,18 +14,18 @@ import java.util.Map;
  */
 final class KeywordClassifier {
 
-    private record Rule(TicketCategory category, String department, List<String> keywords) {}
+    private record Rule(TicketCategory category, TicketDepartment department, List<String> keywords) {}
 
     private static final List<Rule> RULES = List.of(
-            new Rule(TicketCategory.FISCAL, "SUPORTE_ERP",
+            new Rule(TicketCategory.FISCAL, TicketDepartment.SUPORTE_ERP,
                     List.of("nota fiscal", "nf-e", "nfe", "nfs", "sefaz", "icms", "imposto", "tributo", "fiscal", "xml", "danfe", "cfop")),
-            new Rule(TicketCategory.FINANCEIRO, "FINANCEIRO",
+            new Rule(TicketCategory.FINANCEIRO, TicketDepartment.FINANCEIRO,
                     List.of("boleto", "pagamento", "fatura", "cobranca", "reembolso", "financeiro", "conta a pagar", "conta a receber", "pix", "cartao")),
-            new Rule(TicketCategory.RH, "RH",
+            new Rule(TicketCategory.RH, TicketDepartment.RH,
                     List.of("ferias", "salario", "holerite", "contracheque", "ponto", "beneficio", "admissao", "demissao", "rh", "folha")),
-            new Rule(TicketCategory.SISTEMA, "SUPORTE_ERP",
+            new Rule(TicketCategory.SISTEMA, TicketDepartment.SUPORTE_ERP,
                     List.of("erp", "sistema", "modulo", "relatorio", "tela", "cadastro", "erro ao salvar", "lancamento", "bug")),
-            new Rule(TicketCategory.TI, "INFRAESTRUTURA",
+            new Rule(TicketCategory.TI, TicketDepartment.INFRAESTRUTURA,
                     List.of("internet", "rede", "wifi", "wi-fi", "vpn", "impressora", "computador", "notebook", "senha", "email", "e-mail", "servidor", "acesso", "monitor", "teclado"))
     );
 
@@ -63,7 +64,7 @@ final class KeywordClassifier {
         }
 
         if (best == null) {
-            return new TicketClassification(TicketCategory.OUTROS, priority, "SUPORTE_N1");
+            return new TicketClassification(TicketCategory.OUTROS, priority, TicketDepartment.SUPORTE_N1);
         }
         return new TicketClassification(best.category(), priority, best.department());
     }

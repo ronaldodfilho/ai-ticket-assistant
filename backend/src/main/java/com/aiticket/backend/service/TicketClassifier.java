@@ -1,6 +1,7 @@
 package com.aiticket.backend.service;
 
 import com.aiticket.backend.domain.enums.TicketCategory;
+import com.aiticket.backend.domain.enums.TicketDepartment;
 import com.aiticket.backend.domain.enums.TicketPriority;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -8,7 +9,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.Locale;
 import java.util.Optional;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -16,8 +16,6 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 @Slf4j
 public class TicketClassifier {
-
-    static final Set<String> DEPARTMENTS = Set.of("SUPORTE_N1", "SUPORTE_ERP", "INFRAESTRUTURA", "RH", "FINANCEIRO");
 
     private static final Pattern CLASSIFICATION_PATTERN =
             Pattern.compile("([A-Z_]+)\\s*\\|\\s*([A-Z_]+)\\s*\\|\\s*([A-Z_0-9]+)");
@@ -57,16 +55,21 @@ public class TicketClassifier {
             try {
                 TicketCategory category = TicketCategory.valueOf(matcher.group(1));
                 TicketPriority priority = TicketPriority.valueOf(matcher.group(2));
-                String department = matcher.group(3);
-                if (!DEPARTMENTS.contains(department)) {
-                    department = "SUPORTE_N1";
-                }
+                TicketDepartment department = parseDepartment(matcher.group(3));
                 return Optional.of(new TicketClassification(category, priority, department));
             } catch (IllegalArgumentException ignored) {
                 // tenta o próximo trecho que pareça uma classificação
             }
         }
         return Optional.empty();
+    }
+
+    private static TicketDepartment parseDepartment(String value) {
+        try {
+            return TicketDepartment.valueOf(value);
+        } catch (IllegalArgumentException e) {
+            return TicketDepartment.SUPORTE_N1;
+        }
     }
 
     static String stripAccents(String text) {

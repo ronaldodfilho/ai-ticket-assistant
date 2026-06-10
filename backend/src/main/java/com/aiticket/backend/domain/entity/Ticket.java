@@ -1,6 +1,7 @@
 package com.aiticket.backend.domain.entity;
 
 import com.aiticket.backend.domain.enums.TicketCategory;
+import com.aiticket.backend.domain.enums.TicketDepartment;
 import com.aiticket.backend.domain.enums.TicketPriority;
 import com.aiticket.backend.domain.enums.TicketStatus;
 import jakarta.persistence.*;
@@ -8,7 +9,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -43,10 +44,11 @@ public class Ticket {
     @Builder.Default
     private TicketStatus status = TicketStatus.ABERTO;
 
-    private String department;
+    @Enumerated(EnumType.STRING)
+    private TicketDepartment department;
 
     @Column(name = "user_name")
-    private String userName; // Mocked user who opened the ticket
+    private String userName;
 
     @OneToMany(mappedBy = "ticket", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("createdAt ASC")
@@ -55,9 +57,9 @@ public class Ticket {
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     @UpdateTimestamp
     @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 }
