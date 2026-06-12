@@ -1,8 +1,9 @@
-export type TicketStatus = 'ABERTO' | 'EM_ANDAMENTO' | 'RESOLVIDO' | 'FECHADO';
-export type TicketPriority = 'BAIXA' | 'MEDIA' | 'ALTA' | 'URGENTE';
-export type TicketCategory = 'FISCAL' | 'TI' | 'RH' | 'FINANCEIRO' | 'SISTEMA' | 'OUTROS';
+import type { TicketCategory, TicketDepartment, TicketPriority, TicketStatus } from '../api/types';
 
-export const STATUS_OPTIONS: TicketStatus[] = ['ABERTO', 'EM_ANDAMENTO', 'RESOLVIDO', 'FECHADO'];
+export const STATUSES: TicketStatus[] = ['ABERTO', 'EM_ANDAMENTO', 'RESOLVIDO', 'FECHADO'];
+export const PRIORITIES: TicketPriority[] = ['URGENTE', 'ALTA', 'MEDIA', 'BAIXA'];
+export const CATEGORIES: TicketCategory[] = ['FISCAL', 'TI', 'RH', 'FINANCEIRO', 'SISTEMA', 'OUTROS'];
+export const DEPARTMENTS: TicketDepartment[] = ['SUPORTE_N1', 'SUPORTE_ERP', 'INFRAESTRUTURA', 'RH', 'FINANCEIRO'];
 
 export const statusLabel: Record<TicketStatus, string> = {
     ABERTO: 'Aberto',
@@ -11,25 +12,11 @@ export const statusLabel: Record<TicketStatus, string> = {
     FECHADO: 'Fechado',
 };
 
-export const statusColor: Record<TicketStatus, string> = {
-    ABERTO: 'bg-red-50 text-red-700',
-    EM_ANDAMENTO: 'bg-yellow-50 text-yellow-700',
-    RESOLVIDO: 'bg-green-50 text-green-700',
-    FECHADO: 'bg-slate-100 text-slate-600',
-};
-
 export const priorityLabel: Record<TicketPriority, string> = {
     BAIXA: 'Baixa',
     MEDIA: 'Média',
     ALTA: 'Alta',
     URGENTE: 'Urgente',
-};
-
-export const priorityColor: Record<TicketPriority, string> = {
-    BAIXA: 'bg-blue-100 text-blue-700',
-    MEDIA: 'bg-yellow-100 text-yellow-700',
-    ALTA: 'bg-orange-100 text-orange-700',
-    URGENTE: 'bg-red-100 text-red-700',
 };
 
 export const categoryLabel: Record<TicketCategory, string> = {
@@ -41,7 +28,7 @@ export const categoryLabel: Record<TicketCategory, string> = {
     OUTROS: 'Outros',
 };
 
-export const departmentLabel: Record<string, string> = {
+export const departmentLabel: Record<TicketDepartment, string> = {
     SUPORTE_N1: 'Suporte N1',
     SUPORTE_ERP: 'Suporte ERP',
     INFRAESTRUTURA: 'Infraestrutura',
@@ -49,5 +36,5 @@ export const departmentLabel: Record<string, string> = {
     FINANCEIRO: 'Financeiro',
 };
 
-export const label = <K extends string>(map: Record<K, string>, value: string | null | undefined) =>
-    value ? map[value as K] ?? value : '—';
+/** Ordem de atendimento: prioridades mais altas primeiro. */
+export const priorityRank: Record<TicketPriority, number> = { URGENTE: 0, ALTA: 1, MEDIA: 2, BAIXA: 3 };
