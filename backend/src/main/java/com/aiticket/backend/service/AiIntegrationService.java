@@ -48,7 +48,7 @@ public class AiIntegrationService {
     }
 
     public boolean isEnabled() {
-        return apiKey != null && !apiKey.isBlank() && !apiKey.equals("SUA_CHAVE_AQUI");
+        return apiKey != null && !apiKey.isBlank() && !apiKey.equalsIgnoreCase("sua_chave_aqui");
     }
 
     /**

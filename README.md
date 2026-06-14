@@ -67,13 +67,15 @@ Conta com API REST em Java com Spring Boot, portal do cliente e central de atend
 * Node.js 20 ou superior
 * Chave do Google Gemini (opcional), obtida no [Google AI Studio](https://aistudio.google.com/app/apikey)
 
-### 2. Variáveis de Ambiente (Opcional)
+### 2. Chave do Gemini (Opcional)
 
-Para ativar a IA, defina a chave antes de iniciar o backend. Sem ela, o sistema roda no modo local. As demais variáveis estão no `.env.example`.
+Para ativar a IA, crie o arquivo `.env` na raiz do projeto (ou copie o `.env.example`) e cole a chave:
 
-```bash
-export GEMINI_API_KEY=sua_chave_aqui
+```env
+GEMINI_API_KEY=sua_chave_aqui
 ```
+
+O backend lê esse arquivo automaticamente ao iniciar. Sem a chave, o sistema roda no modo local. O `.env` está no `.gitignore` e não é enviado ao repositório.
 
 ### 3. Execução do Backend (Spring Boot)
 
