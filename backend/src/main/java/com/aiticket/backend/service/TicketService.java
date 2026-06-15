@@ -3,6 +3,7 @@ package com.aiticket.backend.service;
 import com.aiticket.backend.domain.entity.Interaction;
 import com.aiticket.backend.domain.entity.Ticket;
 import com.aiticket.backend.domain.enums.InteractionAuthor;
+import com.aiticket.backend.domain.enums.TicketPriority;
 import com.aiticket.backend.domain.enums.TicketStatus;
 import com.aiticket.backend.dto.TicketClassificationUpdateDto;
 import com.aiticket.backend.dto.TicketCreateDto;
@@ -10,22 +11,28 @@ import com.aiticket.backend.dto.TicketResponseDto;
 import com.aiticket.backend.exception.ResourceNotFoundException;
 import com.aiticket.backend.repository.TicketRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class TicketService {
 
     static final String DEFAULT_USER_NAME = "Cliente";
+    static final String MANUAL_PRIORITY_REASON = "Prioridade definida manualmente pelo atendente.";
 
     private final TicketRepository ticketRepository;
     private final AiIntegrationService aiService;
     private final TicketClassifier classifier;
+    private final TransactionTemplate transactionTemplate;
 
     /**
      * Sem @Transactional de propósito: a classificação pode chamar a IA e levar alguns
@@ -46,6 +53,7 @@ public class TicketService {
                 .status(TicketStatus.ABERTO)
                 .category(classification.category())
                 .priority(classification.priority())
+                .priorityReason(classification.reason())
                 .department(classification.department())
                 .build();
 
@@ -81,10 +89,44 @@ public class TicketService {
     @Transactional
     public TicketResponseDto updateClassification(UUID id, TicketClassificationUpdateDto dto) {
         Ticket ticket = findTicket(id);
+        if (ticket.getPriority() != dto.priority()) {
+            ticket.setPriorityReason(MANUAL_PRIORITY_REASON);
+        }
         ticket.setCategory(dto.category());
         ticket.setPriority(dto.priority());
         ticket.setDepartment(dto.department());
         return mapToResponseDto(ticketRepository.saveAndFlush(ticket));
+    }
+
+    /**
+     * Quando o chamado está com prioridade indefinida e o cliente manda mais detalhes,
+     * refaz a triagem com tudo o que o cliente escreveu. A IA é chamada fora de transação.
+     */
+    public void reclassifyIfUndefined(UUID id) {
+        Ticket ticket = loadWithHistory(id);
+        if (ticket.getPriority() != TicketPriority.INDEFINIDA) {
+            return;
+        }
+        String customerText = ticket.getInteractions().stream()
+                .filter(i -> i.getAuthor() == InteractionAuthor.USER)
+                .map(Interaction::getMessage)
+                .collect(Collectors.joining("\n"));
+        TicketClassification classification = classifier.classify(ticket.getTitle(), customerText);
+        if (classification.priority() == TicketPriority.INDEFINIDA) {
+            return;
+        }
+
+        transactionTemplate.executeWithoutResult(status -> {
+            Ticket current = findTicket(id);
+            // Só aplica se ninguém alterou a prioridade enquanto a triagem rodava
+            if (current.getPriority() == TicketPriority.INDEFINIDA) {
+                current.setCategory(classification.category());
+                current.setPriority(classification.priority());
+                current.setDepartment(classification.department());
+                current.setPriorityReason(classification.reason());
+            }
+        });
+        log.info("Chamado {} reclassificado como {} após novos detalhes do cliente.", id, classification.priority());
     }
 
     public String summarizeTicket(UUID id) {
@@ -160,6 +202,11 @@ public class TicketService {
     }
 
     private static String localSuggestion(Ticket ticket) {
+        if (ticket.getPriority() == TicketPriority.INDEFINIDA) {
+            return "Olá, " + ticket.getUserName() + "! Recebemos sua mensagem e queremos ajudar. "
+                    + "Pode descrever o que está acontecendo? Conte qual sistema ou equipamento está com problema, "
+                    + "a mensagem de erro (se houver), desde quando acontece e quantas pessoas estão sendo afetadas.";
+        }
         return "Olá, " + ticket.getUserName() + "! Recebemos seu chamado \"" + ticket.getTitle()
                 + "\" e ele já está com a nossa equipe de " + humanize(ticket.getDepartment())
                 + ". Estamos analisando o caso e retornaremos em breve com uma solução. "
@@ -176,6 +223,7 @@ public class TicketService {
             case "SUPORTE_N1" -> "Suporte N1";
             case "SUPORTE_ERP" -> "Suporte ERP";
             case "MEDIA" -> "média";
+            case "INDEFINIDA" -> "indefinida (aguardando detalhes)";
             default -> value.toString().replace("_", " ").toLowerCase(Locale.ROOT);
         };
     }
@@ -191,6 +239,7 @@ public class TicketService {
                 .description(ticket.getDescription())
                 .category(ticket.getCategory())
                 .priority(ticket.getPriority())
+                .priorityReason(ticket.getPriorityReason())
                 .status(ticket.getStatus())
                 .department(ticket.getDepartment())
                 .userName(ticket.getUserName())

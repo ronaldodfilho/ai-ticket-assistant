@@ -1,5 +1,6 @@
 package com.aiticket.backend.controller;
 
+import com.aiticket.backend.domain.enums.InteractionAuthor;
 import com.aiticket.backend.dto.InteractionCreateDto;
 import com.aiticket.backend.dto.TicketClassificationUpdateDto;
 import com.aiticket.backend.dto.InteractionResponseDto;
@@ -59,7 +60,11 @@ public class TicketController {
     @PostMapping("/{id}/interactions")
     @ResponseStatus(HttpStatus.CREATED)
     public InteractionResponseDto addInteraction(@PathVariable UUID id, @Valid @RequestBody InteractionCreateDto dto) {
-        return interactionService.addInteraction(id, dto);
+        InteractionResponseDto interaction = interactionService.addInteraction(id, dto);
+        if (dto.author() == InteractionAuthor.USER) {
+            ticketService.reclassifyIfUndefined(id);
+        }
+        return interaction;
     }
 
     @GetMapping("/{id}/summary")

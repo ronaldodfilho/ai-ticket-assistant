@@ -97,7 +97,7 @@ class TicketServiceIntegrationTest {
 
     @Test
     void attendantCanCorrectClassification() {
-        TicketResponseDto ticket = ticketService.createTicket(new TicketCreateDto("Olá", "Preciso de ajuda", "Bia"));
+        TicketResponseDto ticket = ticketService.createTicket(new TicketCreateDto("Olá", "Preciso de ajuda com o sistema de estoque", "Bia"));
 
         TicketResponseDto updated = ticketService.updateClassification(ticket.id(),
                 new TicketClassificationUpdateDto(TicketCategory.RH, TicketPriority.ALTA, TicketDepartment.RH));
@@ -105,6 +105,44 @@ class TicketServiceIntegrationTest {
         assertThat(updated.category()).isEqualTo(TicketCategory.RH);
         assertThat(updated.priority()).isEqualTo(TicketPriority.ALTA);
         assertThat(updated.department()).isEqualTo(TicketDepartment.RH);
+    }
+
+    @Test
+    void greetingOnlyTicketIsUndefinedAndReclassifiedAfterDetails() {
+        TicketResponseDto ticket = ticketService.createTicket(new TicketCreateDto("Bom dia", "Bom dia!", "Rafa"));
+
+        assertThat(ticket.priority()).isEqualTo(TicketPriority.INDEFINIDA);
+        assertThat(ticket.priorityReason()).contains("detalhes");
+        assertThat(ticketService.suggestResponse(ticket.id())).contains("Pode descrever");
+
+        interactionService.addInteraction(ticket.id(), new InteractionCreateDto(
+                "Não consigo emitir nota fiscal, a SEFAZ rejeita e o faturamento está parado", InteractionAuthor.USER, null));
+        ticketService.reclassifyIfUndefined(ticket.id());
+
+        TicketResponseDto updated = ticketService.getTicket(ticket.id());
+        assertThat(updated.priority()).isEqualTo(TicketPriority.URGENTE);
+        assertThat(updated.category()).isEqualTo(TicketCategory.FISCAL);
+        assertThat(updated.priorityReason()).startsWith("Urgente:");
+    }
+
+    @Test
+    void reclassificationDoesNotTouchDefinedPriority() {
+        TicketResponseDto ticket = ticketService.createTicket(new TicketCreateDto("Férias", "Dúvida sobre o saldo de férias", "Rafa"));
+        interactionService.addInteraction(ticket.id(), new InteractionCreateDto("O sistema caiu", InteractionAuthor.USER, null));
+
+        ticketService.reclassifyIfUndefined(ticket.id());
+
+        assertThat(ticketService.getTicket(ticket.id()).priority()).isEqualTo(TicketPriority.BAIXA);
+    }
+
+    @Test
+    void manualPriorityChangeRecordsReason() {
+        TicketResponseDto ticket = ticketService.createTicket(new TicketCreateDto("VPN", "Não conecta na VPN", "Rafa"));
+
+        TicketResponseDto updated = ticketService.updateClassification(ticket.id(),
+                new TicketClassificationUpdateDto(ticket.category(), TicketPriority.BAIXA, ticket.department()));
+
+        assertThat(updated.priorityReason()).isEqualTo(TicketService.MANUAL_PRIORITY_REASON);
     }
 
     @Test

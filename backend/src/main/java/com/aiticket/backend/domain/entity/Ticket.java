@@ -39,6 +39,10 @@ public class Ticket {
     @Enumerated(EnumType.STRING)
     private TicketPriority priority;
 
+    /** Por que o chamado recebeu essa prioridade (gerado pela triagem ou pelo atendente). */
+    @Column(name = "priority_reason", length = 500)
+    private String priorityReason;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default

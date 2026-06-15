@@ -16,6 +16,7 @@ public record TicketResponseDto(
         String description,
         TicketCategory category,
         TicketPriority priority,
+        String priorityReason,
         TicketStatus status,
         TicketDepartment department,
         String userName,
