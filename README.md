@@ -12,13 +12,31 @@ Conta com API REST em Java com Spring Boot, portal do cliente e central de atend
 
 ## Recursos e Funcionalidades
 
-* **Triagem Automática:** Cada chamado aberto é classificado em categoria (Fiscal, TI, RH, Financeiro, Sistema, Outros), prioridade (Baixa a Urgente) e setor responsável no momento da abertura.
+* **Triagem Automática:** Cada chamado aberto é classificado em categoria (Fiscal, TI, RH, Financeiro, Sistema, Outros), prioridade e setor responsável no momento da abertura.
+* **Motivo da Prioridade:** Ao passar o mouse sobre a prioridade, o sistema mostra por que ela foi atribuída, citando os trechos do relato que justificam a decisão.
+* **Prioridade Indefinida:** Mensagens sem detalhes, como "bom dia" ou "preciso de ajuda", recebem prioridade Indefinida. Quando o cliente responde descrevendo o problema, o chamado é reclassificado automaticamente.
 * **Portal do Cliente:** Abertura de chamados, protocolo para acompanhamento, lista de chamados abertos no navegador e conversa com o suporte.
 * **Central de Atendimento:** Fila ordenada por prioridade, com filtros por status, prioridade e categoria, busca e indicadores por status.
 * **Resumo e Sugestão de Resposta:** A IA resume o histórico do chamado em até 3 frases e escreve uma sugestão de resposta que o atendente pode revisar antes de enviar.
 * **Fluxo de Status:** A primeira resposta do atendente coloca o chamado em andamento, a resposta do cliente reabre um chamado resolvido e chamados fechados não aceitam novas mensagens.
 * **Correção da Classificação:** O atendente pode ajustar categoria, prioridade e setor sugeridos pela IA.
 * **Modo Local (sem chave de API):** Sem o Gemini configurado, a classificação é feita por palavras-chave e o resumo e a sugestão são montados a partir dos dados do chamado. Se a IA falhar, o sistema usa o modo local automaticamente.
+
+---
+
+## Critérios de prioridade
+
+A IA e o modo local seguem os mesmos critérios, avaliando impacto, bloqueio, prazo e segurança. A palavra "urgente" escrita pelo cliente, sozinha, não define a prioridade.
+
+| Prioridade | Quando é atribuída |
+|---|---|
+| **Urgente** | Operação parada, várias pessoas ou a empresa inteira afetadas, incidente de segurança (vírus, invasão, vazamento) ou bloqueio em processo fiscal/financeiro com prazo |
+| **Alta** | Uma pessoa ou equipe impedida de trabalhar, sem alternativa, ou prazo próximo |
+| **Média** | Problema real com alternativa de contorno, lentidão ou falha intermitente |
+| **Baixa** | Dúvida, pedido de informação, sugestão ou melhoria, sem impacto imediato |
+| **Indefinida** | A mensagem não descreve um problema e não é possível avaliar o impacto |
+
+Na fila de atendimento, os chamados indefinidos aparecem logo depois dos de prioridade alta: basta uma resposta pedindo detalhes para triá-los. Se o atendente alterar a prioridade manualmente, o motivo passa a registrar a alteração.
 
 ---
 
