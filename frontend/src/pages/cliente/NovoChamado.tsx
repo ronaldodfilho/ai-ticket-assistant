@@ -178,6 +178,12 @@ function CreatedCard({ ticket, onNew }: { ticket: Ticket; onNew: () => void }) {
                 </div>
             </dl>
 
+            {ticket.priority === 'INDEFINIDA' && (
+                <p className="mt-4 rounded-lg bg-violet-50 px-3 py-2 text-sm text-violet-800">
+                    Sua mensagem não trouxe detalhes do problema. Abra o chamado e conte o que está acontecendo para que ele seja priorizado.
+                </p>
+            )}
+
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link to={`/chamados/${ticket.id}`} className="btn-primary">Acompanhar chamado</Link>
                 <button type="button" onClick={onNew} className="btn-secondary">Abrir outro chamado</button>

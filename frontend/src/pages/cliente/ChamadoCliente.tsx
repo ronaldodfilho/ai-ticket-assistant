@@ -50,6 +50,13 @@ export default function ChamadoCliente() {
                             <CopyButton text={ticket.id} label="Protocolo" />
                         </div>
                     </div>
+                    {ticket.priority === 'INDEFINIDA' && ticket.status !== 'FECHADO' && (
+                        <p className="mt-4 flex gap-2 rounded-lg bg-violet-50 px-3 py-2 text-sm text-violet-800">
+                            <Info size={16} className="mt-0.5 shrink-0" />
+                            Precisamos de mais detalhes para priorizar seu chamado. Conte o que aconteceu, qual sistema ou equipamento
+                            está com problema, a mensagem de erro e quantas pessoas estão sendo afetadas.
+                        </p>
+                    )}
                     {ticket.status === 'RESOLVIDO' && (
                         <p className="mt-4 flex gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
                             <Info size={16} className="mt-0.5 shrink-0" />

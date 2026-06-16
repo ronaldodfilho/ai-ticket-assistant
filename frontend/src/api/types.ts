@@ -1,5 +1,5 @@
 export type TicketStatus = 'ABERTO' | 'EM_ANDAMENTO' | 'RESOLVIDO' | 'FECHADO';
-export type TicketPriority = 'BAIXA' | 'MEDIA' | 'ALTA' | 'URGENTE';
+export type TicketPriority = 'INDEFINIDA' | 'BAIXA' | 'MEDIA' | 'ALTA' | 'URGENTE';
 export type TicketCategory = 'FISCAL' | 'TI' | 'RH' | 'FINANCEIRO' | 'SISTEMA' | 'OUTROS';
 export type TicketDepartment = 'SUPORTE_N1' | 'SUPORTE_ERP' | 'INFRAESTRUTURA' | 'RH' | 'FINANCEIRO';
 export type InteractionAuthor = 'USER' | 'ATTENDANT' | 'SYSTEM_AI';
@@ -10,6 +10,8 @@ export interface Ticket {
     description: string;
     category: TicketCategory;
     priority: TicketPriority;
+    /** Por que o chamado recebeu essa prioridade. */
+    priorityReason: string | null;
     status: TicketStatus;
     department: TicketDepartment;
     userName: string;

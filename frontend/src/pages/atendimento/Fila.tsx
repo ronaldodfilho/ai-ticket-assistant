@@ -122,7 +122,7 @@ export default function Fila() {
                                             <span className="font-mono text-xs text-slate-400">#{shortId(t.id)}</span>
                                         </td>
                                         <td className="px-4 py-3 text-slate-600">{t.userName}</td>
-                                        <td className="px-4 py-3"><PriorityBadge priority={t.priority} /></td>
+                                        <td className="px-4 py-3"><PriorityBadge priority={t.priority} reason={t.priorityReason} /></td>
                                         <td className="px-4 py-3 text-slate-600">
                                             {categoryLabel[t.category]}
                                             <span className="block text-xs text-slate-400">{departmentLabel[t.department]}</span>

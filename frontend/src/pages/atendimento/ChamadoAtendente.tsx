@@ -48,7 +48,7 @@ export default function ChamadoAtendente() {
                             <span>·</span>
                             <span className="font-mono">#{shortId(ticket.id)}</span>
                             <StatusBadge status={ticket.status} />
-                            <PriorityBadge priority={ticket.priority} />
+                            <PriorityBadge priority={ticket.priority} reason={ticket.priorityReason} />
                         </div>
                     </div>
                 </header>
@@ -277,6 +277,12 @@ function ClassificationPanel({ ticket, onUpdated }: { ticket: Ticket; onUpdated:
                         {DEPARTMENTS.map(d => <option key={d} value={d}>{departmentLabel[d]}</option>)}
                     </select>
                 </div>
+                {ticket.priorityReason && (
+                    <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-600">
+                        <span className="font-medium text-slate-700">Motivo da prioridade: </span>
+                        {ticket.priorityReason}
+                    </p>
+                )}
                 <InlineError message={error} />
                 {dirty && (
                     <button onClick={save} disabled={saving} className="btn-primary w-full">
