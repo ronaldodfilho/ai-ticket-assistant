@@ -12,43 +12,41 @@ export function ChatThread({ interactions, viewer }: Props) {
     const endRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        endRef.current?.scrollIntoView({ block: 'end' });
     }, [interactions.length]);
 
     return (
-        <ol className="space-y-4">
-            {interactions.map(interaction => {
-                const mine = interaction.author === viewer;
-                const roleLabel = interaction.author === 'USER' ? 'Cliente' : 'Suporte';
-                return (
-                    <li key={interaction.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[85%] sm:max-w-[75%] ${mine ? 'items-end' : 'items-start'} flex flex-col`}>
-                            <div className="mb-1 flex items-center gap-2 px-1 text-xs text-slate-500">
-                                <span className="font-medium text-slate-700">{interaction.authorName}</span>
-                                <span>·</span>
-                                <span>{roleLabel}</span>
-                            </div>
-                            <div
-                                className={`whitespace-pre-wrap break-words rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                                    mine
-                                        ? 'rounded-br-md bg-brand-600 text-white'
-                                        : 'rounded-bl-md border border-slate-200 bg-white text-slate-800'
-                                }`}
-                            >
-                                {interaction.message}
-                            </div>
-                            <time
-                                dateTime={interaction.createdAt}
-                                title={formatDateTime(interaction.createdAt)}
-                                className="mt-1 px-1 text-[11px] text-slate-400"
-                            >
-                                {formatTime(interaction.createdAt)}
-                            </time>
-                        </div>
-                    </li>
-                );
-            })}
+        <div role="log" aria-label="Histórico de mensagens">
+            <ol className="space-y-5">
+                {interactions.map(interaction => {
+                    const mine = interaction.author === viewer;
+                    const roleLabel = interaction.author === 'USER' ? 'Cliente' : 'Suporte';
+                    return (
+                        <li key={interaction.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+                            <article className={`flex max-w-[88%] flex-col sm:max-w-[75%] ${mine ? 'items-end' : 'items-start'}`}>
+                                <header className="mb-1 flex items-center gap-1.5 px-1 text-xs text-muted-foreground">
+                                    <span className="font-semibold text-foreground">{interaction.authorName}</span>
+                                    <span aria-hidden="true">·</span>
+                                    <span>{roleLabel}</span>
+                                </header>
+                                <div
+                                    className={`break-anywhere rounded-2xl px-4 py-2.5 text-[15px] leading-relaxed whitespace-pre-wrap sm:text-sm ${
+                                        mine
+                                            ? 'rounded-br-md bg-primary text-on-primary'
+                                            : 'rounded-bl-md border border-border bg-card text-foreground'
+                                    }`}
+                                >
+                                    {interaction.message}
+                                </div>
+                                <time dateTime={interaction.createdAt} title={formatDateTime(interaction.createdAt)} className="mt-1 px-1 text-xs text-muted-foreground tabular-nums">
+                                    {formatTime(interaction.createdAt)}
+                                </time>
+                            </article>
+                        </li>
+                    );
+                })}
+            </ol>
             <div ref={endRef} />
-        </ol>
+        </div>
     );
 }

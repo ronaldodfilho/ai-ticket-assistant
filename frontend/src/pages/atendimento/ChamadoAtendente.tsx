@@ -1,4 +1,4 @@
-import { ArrowLeft, Bot, Loader2, Save, Wand2 } from 'lucide-react';
+import { ArrowLeft, Bot, Loader2, RefreshCw, Save, Wand2 } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api, getErrorMessage } from '../../api/client';
@@ -7,7 +7,7 @@ import { PriorityBadge, StatusBadge } from '../../components/Badges';
 import { ChatThread } from '../../components/ChatThread';
 import { Composer } from '../../components/Composer';
 import { CopyButton } from '../../components/CopyButton';
-import { ErrorState, InlineError, LoadingState } from '../../components/States';
+import { ErrorState, InlineError, LoadingRegion, Skeleton } from '../../components/States';
 import { usePolling } from '../../hooks/usePolling';
 import { useSystemInfo } from '../../hooks/useSystemInfo';
 import { formatDateTime, formatRelative, shortId } from '../../lib/format';
@@ -26,40 +26,64 @@ export default function ChamadoAtendente() {
         id,
     );
 
-    if (loading) return <LoadingState label="Carregando chamado..." />;
+    if (loading) {
+        return (
+            <LoadingRegion label="Carregando chamado">
+                <div className="mx-auto grid max-w-7xl gap-6 p-4 sm:p-6 lg:p-8 xl:grid-cols-[minmax(0,1fr)_340px]">
+                    <div className="card space-y-4 p-5">
+                        <Skeleton className="h-6 w-1/2" />
+                        <Skeleton className="h-4 w-1/3" />
+                        <Skeleton className="h-20 w-3/4" />
+                        <Skeleton className="ml-auto h-20 w-2/3" />
+                    </div>
+                    <div className="space-y-6">
+                        <Skeleton className="h-40 w-full rounded-xl" />
+                        <Skeleton className="h-32 w-full rounded-xl" />
+                    </div>
+                </div>
+            </LoadingRegion>
+        );
+    }
     if (!data) {
-        return <ErrorState message={error ?? 'Chamado não encontrado.'} action={<Link to="/atendimento" className="btn-secondary">Voltar à fila</Link>} />;
+        return (
+            <div className="p-4 sm:p-8">
+                <div className="card mx-auto max-w-xl">
+                    <ErrorState message={error ?? 'Chamado não encontrado.'} action={<Link to="/atendimento" className="btn-secondary">Voltar à fila</Link>} />
+                </div>
+            </div>
+        );
     }
 
     const { ticket, interactions } = data;
     const updateTicket = (updated: Ticket) => setData({ ticket: updated, interactions });
 
     return (
-        <div className="mx-auto grid max-w-7xl items-start gap-6 p-4 sm:p-6 lg:p-8 xl:grid-cols-[1fr_340px]">
-            <section className="card flex h-[80vh] min-h-[32rem] flex-col overflow-hidden xl:sticky xl:top-8 xl:h-[calc(100vh-4rem)]">
-                <header className="flex flex-wrap items-start gap-3 border-b border-slate-200 p-4 sm:p-5">
-                    <Link to="/atendimento" className="btn-ghost -ml-1 px-2" aria-label="Voltar à fila">
-                        <ArrowLeft size={18} />
+        <div className="mx-auto grid max-w-7xl items-start gap-6 p-4 sm:p-6 lg:p-8 xl:grid-cols-[minmax(0,1fr)_340px]">
+            <section aria-labelledby="ticket-title" className="card flex h-[80dvh] min-h-[32rem] flex-col overflow-hidden xl:sticky xl:top-8 xl:h-[calc(100dvh-4rem)]">
+                <header className="flex items-start gap-2 border-b border-border p-3 sm:p-4">
+                    <Link to="/atendimento" className="btn-ghost btn-icon shrink-0" aria-label="Voltar à fila">
+                        <ArrowLeft size={18} aria-hidden="true" />
                     </Link>
-                    <div className="min-w-0 flex-1">
-                        <h1 className="text-lg font-semibold text-slate-900">{ticket.title}</h1>
-                        <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-500">
+                    <div className="min-w-0 flex-1 py-1">
+                        <h1 id="ticket-title" className="text-lg font-bold text-balance text-foreground">{ticket.title}</h1>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                             <span>{ticket.userName}</span>
-                            <span>·</span>
-                            <span className="font-mono">#{shortId(ticket.id)}</span>
+                            <span aria-hidden="true">·</span>
+                            <span className="font-mono text-xs">#{shortId(ticket.id)}</span>
                             <StatusBadge status={ticket.status} />
                             <PriorityBadge priority={ticket.priority} reason={ticket.priorityReason} />
                         </div>
                     </div>
                 </header>
 
-                <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50 p-4 sm:p-6">
+                <div className="min-h-0 flex-1 overflow-y-auto bg-background p-4 sm:p-6">
                     <ChatThread interactions={interactions} viewer="ATTENDANT" />
                 </div>
 
                 <Composer
                     value={draft}
                     onChange={setDraft}
+                    label="Resposta ao cliente"
                     placeholder="Responder ao cliente..."
                     disabled={ticket.status === 'FECHADO'}
                     disabledReason="Chamado fechado. Reabra alterando o status para responder."
@@ -71,7 +95,7 @@ export default function ChamadoAtendente() {
                 />
             </section>
 
-            <aside className="space-y-6">
+            <aside className="space-y-6" aria-label="Detalhes e ações do chamado">
                 <SummaryPanel ticketId={ticket.id} version={`${interactions.length}|${ticket.updatedAt}`} />
                 <StatusPanel ticket={ticket} onUpdated={updateTicket} />
                 <ClassificationPanel ticket={ticket} onUpdated={updateTicket} />
@@ -81,9 +105,9 @@ export default function ChamadoAtendente() {
                         <Detail label="Aberto em" value={formatDateTime(ticket.createdAt)} />
                         <Detail label="Última atividade" value={formatRelative(ticket.updatedAt)} />
                         <div>
-                            <dt className="text-xs text-slate-500">Protocolo</dt>
+                            <dt className="text-xs font-semibold text-muted-foreground">Protocolo</dt>
                             <dd className="flex items-center justify-between gap-2">
-                                <span className="truncate font-mono text-xs text-slate-700">{ticket.id}</span>
+                                <span className="break-anywhere font-mono text-xs text-foreground">{ticket.id}</span>
                                 <CopyButton text={ticket.id} />
                             </dd>
                         </div>
@@ -97,8 +121,8 @@ export default function ChamadoAtendente() {
 function Panel({ title, icon, children, action }: { title: string; icon?: ReactNode; children: ReactNode; action?: ReactNode }) {
     return (
         <section className="card p-5">
-            <div className="mb-4 flex items-center justify-between gap-2">
-                <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900">{icon}{title}</h2>
+            <div className="mb-4 flex min-h-10 items-center justify-between gap-2">
+                <h2 className="flex items-center gap-2 text-sm font-bold text-foreground">{icon}{title}</h2>
                 {action}
             </div>
             {children}
@@ -109,8 +133,8 @@ function Panel({ title, icon, children, action }: { title: string; icon?: ReactN
 function Detail({ label, value }: { label: string; value: string }) {
     return (
         <div>
-            <dt className="text-xs text-slate-500">{label}</dt>
-            <dd className="text-slate-800">{value}</dd>
+            <dt className="text-xs font-semibold text-muted-foreground">{label}</dt>
+            <dd className="text-foreground">{value}</dd>
         </div>
     );
 }
@@ -123,6 +147,7 @@ function SuggestButton({ ticketId, onSuggestion }: { ticketId: string; onSuggest
             <button
                 type="button"
                 disabled={loading}
+                aria-busy={loading}
                 onClick={async () => {
                     setLoading(true);
                     setError(null);
@@ -134,12 +159,12 @@ function SuggestButton({ ticketId, onSuggestion }: { ticketId: string; onSuggest
                         setLoading(false);
                     }
                 }}
-                className="btn border border-brand-200 bg-brand-50 px-3 py-1.5 text-xs text-brand-700 hover:bg-brand-100"
+                className="btn bg-primary-soft px-3 text-primary-active hover:bg-primary-soft-hover"
             >
-                {loading ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
+                {loading ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <Wand2 size={16} aria-hidden="true" />}
                 {loading ? 'Gerando sugestão...' : 'Sugerir resposta'}
             </button>
-            {error && <span className="text-xs text-red-600">{error}</span>}
+            {error && <span role="alert" className="text-sm text-destructive">{error}</span>}
         </div>
     );
 }
@@ -169,24 +194,26 @@ function SummaryPanel({ ticketId, version }: { ticketId: string; version: string
     return (
         <Panel
             title="Resumo do chamado"
-            icon={<Bot size={16} className="text-brand-600" />}
+            icon={<Bot size={16} className="text-primary" aria-hidden="true" />}
             action={
-                <button onClick={generate} disabled={loading} className="btn-ghost px-2 py-1 text-xs text-brand-700">
-                    {loading ? <Loader2 size={14} className="animate-spin" /> : null}
-                    {summary ? 'Atualizar' : 'Gerar'}
+                <button onClick={generate} disabled={loading} aria-busy={loading} className="btn-ghost px-3 text-primary-active">
+                    {loading ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : summary && <RefreshCw size={14} aria-hidden="true" />}
+                    {summary ? 'Atualizar' : 'Gerar resumo'}
                 </button>
             }
         >
-            <InlineError message={error} />
-            {summary ? (
-                <>
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap text-slate-700">{summary}</p>
-                    {outdated && <p className="mt-2 text-xs text-amber-700">O chamado mudou desde este resumo.</p>}
-                </>
-            ) : (
-                !error && <p className="text-sm text-slate-500">Gere um resumo do histórico para entender o caso rapidamente.</p>
-            )}
-            {info && !info.aiEnabled && <p className="mt-3 text-xs text-slate-400">Modo local: resumo montado a partir dos dados do chamado.</p>}
+            <div aria-live="polite">
+                <InlineError message={error} />
+                {summary ? (
+                    <>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground">{summary}</p>
+                        {outdated && <p className="mt-2 text-xs font-semibold text-amber-800">O chamado mudou desde este resumo.</p>}
+                    </>
+                ) : (
+                    !error && <p className="text-sm text-muted-foreground">Gere um resumo do histórico para entender o caso rapidamente.</p>
+                )}
+            </div>
+            {info && !info.aiEnabled && <p className="mt-3 text-xs text-muted-foreground">Modo local: resumo montado a partir dos dados do chamado.</p>}
         </Panel>
     );
 }
@@ -209,22 +236,23 @@ function StatusPanel({ ticket, onUpdated }: { ticket: Ticket; onUpdated: (t: Tic
 
     return (
         <Panel title="Status">
-            <div className="grid grid-cols-2 gap-2">
-                {STATUSES.map(s => (
-                    <button
-                        key={s}
-                        disabled={saving || s === ticket.status}
-                        onClick={() => change(s)}
-                        aria-pressed={s === ticket.status}
-                        className={`btn px-2 py-1.5 text-xs disabled:cursor-default ${
-                            s === ticket.status
-                                ? 'bg-brand-600 text-white disabled:opacity-100'
-                                : 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
-                        }`}
-                    >
-                        {statusLabel[s]}
-                    </button>
-                ))}
+            <div role="group" aria-label="Alterar status" className="grid grid-cols-2 gap-2">
+                {STATUSES.map(s => {
+                    const current = s === ticket.status;
+                    return (
+                        <button
+                            key={s}
+                            disabled={saving}
+                            onClick={() => !current && change(s)}
+                            aria-pressed={current}
+                            className={`btn px-2 text-xs ${current
+                                ? 'cursor-default bg-primary text-on-primary'
+                                : 'border border-border-strong bg-card text-foreground hover:bg-subtle'}`}
+                        >
+                            {statusLabel[s]}
+                        </button>
+                    );
+                })}
             </div>
             <div className="mt-3"><InlineError message={error} /></div>
         </Panel>
@@ -259,37 +287,39 @@ function ClassificationPanel({ ticket, onUpdated }: { ticket: Ticket; onUpdated:
     return (
         <Panel title="Classificação">
             <div className="space-y-3">
-                <div>
-                    <label htmlFor="category" className="label text-xs">Categoria</label>
-                    <select id="category" value={form.category} onChange={e => setForm({ ...form, category: e.target.value as Classification['category'] })} className="input">
-                        {CATEGORIES.map(c => <option key={c} value={c}>{categoryLabel[c]}</option>)}
-                    </select>
-                </div>
-                <div>
-                    <label htmlFor="priority" className="label text-xs">Prioridade</label>
-                    <select id="priority" value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value as Classification['priority'] })} className="input">
-                        {PRIORITIES.map(p => <option key={p} value={p}>{priorityLabel[p]}</option>)}
-                    </select>
-                </div>
-                <div>
-                    <label htmlFor="department" className="label text-xs">Setor</label>
-                    <select id="department" value={form.department} onChange={e => setForm({ ...form, department: e.target.value as Classification['department'] })} className="input">
-                        {DEPARTMENTS.map(d => <option key={d} value={d}>{departmentLabel[d]}</option>)}
-                    </select>
-                </div>
+                <SelectField id="category" label="Categoria" value={form.category} onChange={v => setForm({ ...form, category: v as Classification['category'] })}>
+                    {CATEGORIES.map(c => <option key={c} value={c}>{categoryLabel[c]}</option>)}
+                </SelectField>
+                <SelectField id="priority" label="Prioridade" value={form.priority} onChange={v => setForm({ ...form, priority: v as Classification['priority'] })}>
+                    {PRIORITIES.map(p => <option key={p} value={p}>{priorityLabel[p]}</option>)}
+                </SelectField>
+                <SelectField id="department" label="Setor" value={form.department} onChange={v => setForm({ ...form, department: v as Classification['department'] })}>
+                    {DEPARTMENTS.map(d => <option key={d} value={d}>{departmentLabel[d]}</option>)}
+                </SelectField>
                 {ticket.priorityReason && (
-                    <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs leading-relaxed text-slate-600">
-                        <span className="font-medium text-slate-700">Motivo da prioridade: </span>
+                    <p className="rounded-lg bg-subtle px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
+                        <span className="font-semibold text-foreground">Motivo da prioridade: </span>
                         {ticket.priorityReason}
                     </p>
                 )}
                 <InlineError message={error} />
                 {dirty && (
                     <button onClick={save} disabled={saving} className="btn-primary w-full">
-                        {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Salvar classificação
+                        {saving ? <Loader2 size={16} className="animate-spin" aria-hidden="true" /> : <Save size={16} aria-hidden="true" />} Salvar classificação
                     </button>
                 )}
             </div>
         </Panel>
+    );
+}
+
+function SelectField({ id, label, value, onChange, children }: { id: string; label: string; value: string; onChange: (v: string) => void; children: ReactNode }) {
+    return (
+        <div>
+            <label htmlFor={id} className="mb-1 block text-xs font-semibold text-muted-foreground">{label}</label>
+            <select id={id} value={value} onChange={e => onChange(e.target.value)} className="input cursor-pointer">
+                {children}
+            </select>
+        </div>
     );
 }

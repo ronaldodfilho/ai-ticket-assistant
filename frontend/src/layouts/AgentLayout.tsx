@@ -5,41 +5,43 @@ import { AiModeBadge } from '../components/AiModeBadge';
 import { Logo } from '../components/Logo';
 import { attendantName } from '../lib/storage';
 
+const navClass = ({ isActive }: { isActive: boolean }) =>
+    `flex min-h-11 items-center gap-2.5 rounded-lg px-3 text-sm font-semibold transition-colors duration-150 sm:min-h-10 ${
+        isActive ? 'bg-primary-soft text-primary-active' : 'text-muted-foreground hover:bg-subtle hover:text-foreground'
+    }`;
+
 export default function AgentLayout() {
     const [name, setName] = useState(attendantName.get());
 
-    const navClass = ({ isActive }: { isActive: boolean }) =>
-        `flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-            isActive ? 'bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100'
-        }`;
-
     return (
-        <div className="flex min-h-screen flex-col lg:flex-row">
-            <aside className="flex shrink-0 flex-col gap-6 border-b border-slate-200 bg-white p-4 lg:sticky lg:top-0 lg:h-screen lg:w-64 lg:border-r lg:border-b-0">
-                <div className="flex items-center justify-between lg:block">
-                    <Logo to="/atendimento" subtitle="Atendimento" />
+        <div className="flex min-h-dvh flex-col lg:flex-row">
+            <a href="#conteudo" className="skip-link">Pular para o conteúdo</a>
+            <aside className="z-30 flex shrink-0 flex-col gap-5 border-b border-border bg-card p-4 lg:sticky lg:top-0 lg:h-dvh lg:w-64 lg:border-r lg:border-b-0">
+                <div className="flex items-center justify-between gap-3">
+                    <Logo to="/atendimento" subtitle="Central de atendimento" />
                     <div className="lg:hidden"><AiModeBadge /></div>
                 </div>
 
-                <nav className="flex gap-1 lg:flex-col">
+                <nav aria-label="Navegação do atendimento" className="flex gap-1 overflow-x-auto lg:flex-col">
                     <NavLink to="/atendimento" end className={navClass}>
-                        <Inbox size={16} /> Fila de chamados
+                        <Inbox size={18} aria-hidden="true" /> Fila de chamados
                     </NavLink>
-                    <Link to="/" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100">
-                        <ExternalLink size={16} /> Portal do cliente
+                    <Link to="/" className={navClass({ isActive: false })}>
+                        <ExternalLink size={18} aria-hidden="true" /> Portal do cliente
                     </Link>
                 </nav>
 
                 <div className="space-y-4 lg:mt-auto">
                     <div>
-                        <label htmlFor="attendant" className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-slate-500">
-                            <UserRound size={14} /> Seu nome nas respostas
+                        <label htmlFor="attendant" className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                            <UserRound size={14} aria-hidden="true" /> Seu nome nas respostas
                         </label>
                         <input
                             id="attendant"
                             value={name}
                             maxLength={100}
                             placeholder="Atendente"
+                            autoComplete="name"
                             onChange={e => {
                                 setName(e.target.value);
                                 attendantName.set(e.target.value);
@@ -51,7 +53,7 @@ export default function AgentLayout() {
                 </div>
             </aside>
 
-            <main className="min-w-0 flex-1">
+            <main id="conteudo" tabIndex={-1} className="min-w-0 flex-1 outline-none">
                 <Outlet />
             </main>
         </div>

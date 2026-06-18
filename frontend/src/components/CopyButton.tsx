@@ -8,16 +8,16 @@ export function CopyButton({ text, label = 'Copiar' }: { text: string; label?: s
         try {
             await navigator.clipboard.writeText(text);
             setCopied(true);
-            window.setTimeout(() => setCopied(false), 1500);
+            window.setTimeout(() => setCopied(false), 1800);
         } catch {
             // área de transferência indisponível (ex.: página sem HTTPS)
         }
     };
 
     return (
-        <button type="button" onClick={copy} className="btn-ghost px-2 py-1 text-xs" title={text}>
-            {copied ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
-            {copied ? 'Copiado' : label}
+        <button type="button" onClick={copy} className="btn-ghost px-2.5 text-xs">
+            {copied ? <Check size={14} className="text-emerald-700" aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
+            <span aria-live="polite">{copied ? 'Copiado' : label}</span>
         </button>
     );
 }

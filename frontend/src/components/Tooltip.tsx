@@ -5,35 +5,48 @@ const WIDTH = 288;
 const MARGIN = 8;
 
 /**
- * Dica exibida ao passar o mouse ou focar o elemento (teclado e toque).
- * Renderizada no body com posição fixa, para não ser cortada por tabelas com rolagem.
+ * Dica exibida ao passar o mouse, focar pelo teclado ou tocar (toque alterna a dica).
+ * Renderizada no body com posição fixa para não ser cortada por áreas com rolagem.
  */
-export function Tooltip({ content, children }: { content: ReactNode; children: ReactNode }) {
+export function Tooltip({ content, children, label }: { content: ReactNode; children: ReactNode; label: string }) {
     const id = useId();
-    const ref = useRef<HTMLSpanElement>(null);
+    const ref = useRef<HTMLButtonElement>(null);
     const [position, setPosition] = useState<{ left: number; top: number; below: boolean } | null>(null);
+    // Num toque, o navegador dispara "hover" e "click" em sequência; o estado antes do toque decide se abre ou fecha
+    const openBeforePress = useRef(false);
 
     const show = () => {
         const rect = ref.current?.getBoundingClientRect();
         if (!rect) return;
         const half = WIDTH / 2;
         const left = Math.min(Math.max(rect.left + rect.width / 2, half + MARGIN), window.innerWidth - half - MARGIN);
-        const below = rect.top < 140;
+        const below = rect.top < 150;
         setPosition({ left, top: below ? rect.bottom + MARGIN : rect.top - MARGIN, below });
     };
     const hide = () => setPosition(null);
 
     return (
-        <span
+        <button
             ref={ref}
-            tabIndex={0}
+            type="button"
+            aria-label={label}
+            aria-describedby={position ? id : undefined}
             onMouseEnter={show}
             onMouseLeave={hide}
             onFocus={show}
             onBlur={hide}
-            onClick={e => e.stopPropagation()}
-            aria-describedby={position ? id : undefined}
-            className="inline-flex cursor-help rounded-full"
+            onKeyDown={e => e.key === 'Escape' && hide()}
+            onPointerDown={() => {
+                openBeforePress.current = position !== null;
+            }}
+            onClick={e => {
+                e.stopPropagation();
+                e.preventDefault();
+                if (openBeforePress.current) hide();
+                else show();
+                openBeforePress.current = false;
+            }}
+            className="-m-1.5 inline-flex cursor-help rounded-full p-1.5"
         >
             {children}
             {position &&
@@ -42,7 +55,7 @@ export function Tooltip({ content, children }: { content: ReactNode; children: R
                         id={id}
                         role="tooltip"
                         style={{ left: position.left, top: position.top, width: WIDTH }}
-                        className={`pointer-events-none fixed z-50 -translate-x-1/2 rounded-lg bg-slate-900 px-3 py-2 text-xs leading-relaxed text-white shadow-lg ${
+                        className={`pointer-events-none fixed z-50 -translate-x-1/2 rounded-lg bg-foreground px-3 py-2 text-left text-xs leading-relaxed font-normal text-white shadow-lg ${
                             position.below ? '' : '-translate-y-full'
                         }`}
                     >
@@ -50,6 +63,6 @@ export function Tooltip({ content, children }: { content: ReactNode; children: R
                     </div>,
                     document.body,
                 )}
-        </span>
+        </button>
     );
 }
