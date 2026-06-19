@@ -20,6 +20,7 @@ Conta com API REST em Java com Spring Boot, portal do cliente e central de atend
 * **Resumo e Sugestão de Resposta:** A IA resume o histórico do chamado em até 3 frases e escreve uma sugestão de resposta que o atendente pode revisar antes de enviar.
 * **Fluxo de Status:** A primeira resposta do atendente coloca o chamado em andamento, a resposta do cliente reabre um chamado resolvido e chamados fechados não aceitam novas mensagens.
 * **Correção da Classificação:** O atendente pode ajustar categoria, prioridade e setor sugeridos pela IA.
+* **Interface Acessível e Responsiva:** Contraste AA, navegação completa por teclado, mensagens de erro junto a cada campo, leitura por leitores de tela e layout adaptado ao celular, com a fila em cartões em vez de tabela.
 * **Modo Local (sem chave de API):** Sem o Gemini configurado, a classificação é feita por palavras-chave e o resumo e a sugestão são montados a partir dos dados do chamado. Se a IA falhar, o sistema usa o modo local automaticamente.
 
 ---
