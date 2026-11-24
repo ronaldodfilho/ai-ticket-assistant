@@ -1,113 +1,115 @@
-# AI Ticket Assistant - Help Desk com Triagem Inteligente de Chamados
+# AI Ticket Assistant - Help Desk with AI Ticket Triage
+
+> [Versão em português](README.pt-BR.md)
 
 <p align="center">
-  <img src="docs/demonstracao.gif" alt="Demonstração AI Ticket Assistant" width="100%" />
+  <img src="docs/demonstracao.gif" alt="AI Ticket Assistant demo" width="100%" />
 </p>
 
-Sistema de suporte (Help Desk) que classifica automaticamente cada chamado em categoria, prioridade e setor responsável, e auxilia o atendente com resumo do histórico e sugestão de resposta usando a IA do Google Gemini.
+A help desk system that automatically classifies every ticket by category, priority and responsible department, and assists agents with a summary of the conversation and a suggested reply using Google Gemini.
 
-Conta com API REST em Java com Spring Boot, portal do cliente e central de atendimento em React com TypeScript, e funciona mesmo sem chave de API, com classificação e textos gerados localmente.
-
----
-
-## Recursos e Funcionalidades
-
-* **Triagem Automática:** Cada chamado aberto é classificado em categoria (Fiscal, TI, RH, Financeiro, Sistema, Outros), prioridade e setor responsável no momento da abertura.
-* **Motivo da Prioridade:** Ao passar o mouse sobre a prioridade, o sistema mostra por que ela foi atribuída, citando os trechos do relato que justificam a decisão.
-* **Prioridade Indefinida:** Mensagens sem detalhes, como "bom dia" ou "preciso de ajuda", recebem prioridade Indefinida. Quando o cliente responde descrevendo o problema, o chamado é reclassificado automaticamente.
-* **Portal do Cliente:** Abertura de chamados, protocolo para acompanhamento, lista de chamados abertos no navegador e conversa com o suporte.
-* **Central de Atendimento:** Fila ordenada por prioridade, com filtros por status, prioridade e categoria, busca e indicadores por status.
-* **Resumo e Sugestão de Resposta:** A IA resume o histórico do chamado em até 3 frases e escreve uma sugestão de resposta que o atendente pode revisar antes de enviar.
-* **Fluxo de Status:** A primeira resposta do atendente coloca o chamado em andamento, a resposta do cliente reabre um chamado resolvido e chamados fechados não aceitam novas mensagens.
-* **Correção da Classificação:** O atendente pode ajustar categoria, prioridade e setor sugeridos pela IA.
-* **Interface Acessível e Responsiva:** Contraste AA, navegação completa por teclado, mensagens de erro junto a cada campo, leitura por leitores de tela e layout adaptado ao celular, com a fila em cartões em vez de tabela.
-* **Modo Local (sem chave de API):** Sem o Gemini configurado, a classificação é feita por palavras-chave e o resumo e a sugestão são montados a partir dos dados do chamado. Se a IA falhar, o sistema usa o modo local automaticamente.
+It has a Java/Spring Boot REST API, a customer portal and an agent console built with React and TypeScript, and it keeps working without an API key, falling back to locally generated classification and text.
 
 ---
 
-## Critérios de prioridade
+## Features
 
-A IA e o modo local seguem os mesmos critérios, avaliando impacto, bloqueio, prazo e segurança. A palavra "urgente" escrita pelo cliente, sozinha, não define a prioridade.
+* **Automatic triage:** every new ticket is classified by category (Tax, IT, HR, Finance, System, Other), priority and responsible department as soon as it is opened.
+* **Priority reasoning:** hovering over the priority shows why it was assigned, quoting the parts of the request that justify the decision.
+* **Undefined priority:** messages with no details, such as "good morning" or "I need help", get an Undefined priority. When the customer replies describing the problem, the ticket is reclassified automatically.
+* **Customer portal:** open tickets, get a tracking number, see open tickets in the browser and chat with support.
+* **Agent console:** queue sorted by priority, with filters by status, priority and category, search and status counters.
+* **Summary and suggested reply:** the AI summarizes the ticket history in up to 3 sentences and drafts a reply the agent can review before sending.
+* **Status flow:** the agent's first reply moves the ticket to in progress, a customer reply reopens a resolved ticket and closed tickets don't accept new messages.
+* **Classification override:** the agent can adjust the category, priority and department suggested by the AI.
+* **Accessible and responsive UI:** AA contrast, full keyboard navigation, errors shown next to each field, screen-reader support and a mobile layout where the queue becomes cards instead of a table.
+* **Local mode (no API key):** without Gemini configured, classification uses keywords and the summary and suggestion are built from the ticket data. If the AI call fails, the system falls back to local mode automatically.
 
-| Prioridade | Quando é atribuída |
+---
+
+## Priority criteria
+
+The AI and the local mode follow the same criteria, weighing impact, blockage, deadline and security. The word "urgent" written by the customer does not set the priority on its own.
+
+| Priority | When it is assigned |
 |---|---|
-| **Urgente** | Operação parada, várias pessoas ou a empresa inteira afetadas, incidente de segurança (vírus, invasão, vazamento) ou bloqueio em processo fiscal/financeiro com prazo |
-| **Alta** | Uma pessoa ou equipe impedida de trabalhar, sem alternativa, ou prazo próximo |
-| **Média** | Problema real com alternativa de contorno, lentidão ou falha intermitente |
-| **Baixa** | Dúvida, pedido de informação, sugestão ou melhoria, sem impacto imediato |
-| **Indefinida** | A mensagem não descreve um problema e não é possível avaliar o impacto |
+| **Urgent** | Operations stopped, several people or the whole company affected, security incident (virus, intrusion, data leak) or a blocked tax/finance process with a deadline |
+| **High** | One person or team unable to work, with no workaround, or a close deadline |
+| **Medium** | A real problem with a workaround, slowness or intermittent failure |
+| **Low** | Question, information request, suggestion or improvement, with no immediate impact |
+| **Undefined** | The message doesn't describe a problem and the impact can't be assessed |
 
-Na fila de atendimento, os chamados indefinidos aparecem logo depois dos de prioridade alta: basta uma resposta pedindo detalhes para triá-los. Se o atendente alterar a prioridade manualmente, o motivo passa a registrar a alteração.
+In the agent queue, undefined tickets appear right after high-priority ones: a single reply asking for details is enough to triage them. If the agent changes the priority manually, the reason records the change.
 
 ---
 
-## Estrutura do projeto
+## Project structure
 
 ```text
 .
-├── backend/                          # API REST (Java 21 + Spring Boot 4)
+├── backend/                          # REST API (Java 21 + Spring Boot 4)
 │   ├── src/main/java/com/aiticket/backend/
-│   │   ├── config/                   # Configuração de CORS
-│   │   ├── controller/               # Rotas de chamados, dashboard e sistema
-│   │   ├── domain/                   # Entidades JPA e enums
-│   │   ├── dto/                      # Objetos de entrada e saída com validação
-│   │   ├── exception/                # Tratamento de erros (Problem Details)
-│   │   ├── repository/               # Repositórios Spring Data JPA
-│   │   └── service/                  # Regras de negócio, Gemini e classificadores
+│   │   ├── config/                   # CORS configuration
+│   │   ├── controller/               # Ticket, dashboard and system routes
+│   │   ├── domain/                   # JPA entities and enums
+│   │   ├── dto/                      # Validated request and response objects
+│   │   ├── exception/                # Error handling (Problem Details)
+│   │   ├── repository/               # Spring Data JPA repositories
+│   │   └── service/                  # Business rules, Gemini and classifiers
 │   ├── src/main/resources/
-│   │   ├── application.properties            # Configuração padrão (H2 em memória)
-│   │   └── application-postgres.properties   # Perfil para PostgreSQL
-│   ├── src/test/                     # Testes de classificação e do fluxo de chamados
+│   │   ├── application.properties            # Default configuration (in-memory H2)
+│   │   └── application-postgres.properties   # PostgreSQL profile
+│   ├── src/test/                     # Classification and ticket flow tests
 │   └── pom.xml
-├── frontend/                         # Interface web (React 19 + TypeScript + Vite)
+├── frontend/                         # Web interface (React 19 + TypeScript + Vite)
 │   ├── src/
-│   │   ├── api/                      # Cliente HTTP e tipos da API
-│   │   ├── components/               # Conversa, badges, estados e campos reutilizáveis
-│   │   ├── hooks/                    # Atualização automática e status da IA
-│   │   ├── layouts/                  # Layout do portal e da central de atendimento
-│   │   ├── lib/                      # Rótulos, formatação de datas e armazenamento local
-│   │   └── pages/                    # Telas do cliente e do atendente
+│   │   ├── api/                      # HTTP client and API types
+│   │   ├── components/               # Chat, badges, states and reusable fields
+│   │   ├── hooks/                    # Auto-refresh and AI status
+│   │   ├── layouts/                  # Portal and agent console layouts
+│   │   ├── lib/                      # Labels, date formatting and local storage
+│   │   └── pages/                    # Customer and agent screens
 │   ├── package.json
-│   └── vite.config.ts                # Proxy de /api para o backend
+│   └── vite.config.ts                # Proxies /api to the backend
 ├── docs/
-│   └── demonstracao.gif              # Demonstração do sistema
-├── docker-compose.yml                # PostgreSQL para uso fora do modo de desenvolvimento
-├── .env.example                      # Exemplo de variáveis de ambiente
+│   └── demonstracao.gif              # System demo
+├── docker-compose.yml                # PostgreSQL outside development mode
+├── .env.example                      # Example environment variables
 └── README.md
 ```
 
 ---
 
-## Como executar
+## Getting started
 
-### 1. Pré-requisitos
+### 1. Prerequisites
 
 * Java 21
-* Node.js 20 ou superior
-* Chave do Google Gemini (opcional), obtida no [Google AI Studio](https://aistudio.google.com/app/apikey)
+* Node.js 20 or later
+* Google Gemini API key (optional), from [Google AI Studio](https://aistudio.google.com/app/apikey)
 
-### 2. Chave do Gemini (Opcional)
+### 2. Gemini key (optional)
 
-Para ativar a IA, crie o arquivo `.env` na raiz do projeto (ou copie o `.env.example`) e cole a chave:
+To enable the AI, create a `.env` file in the project root (or copy `.env.example`) and paste the key:
 
 ```env
-GEMINI_API_KEY=sua_chave_aqui
+GEMINI_API_KEY=your_key_here
 ```
 
-O backend lê esse arquivo automaticamente ao iniciar. Sem a chave, o sistema roda no modo local. O `.env` está no `.gitignore` e não é enviado ao repositório.
+The backend reads this file automatically on startup. Without the key, the system runs in local mode. `.env` is in `.gitignore` and is never committed.
 
-### 3. Execução do Backend (Spring Boot)
+### 3. Run the backend (Spring Boot)
 
 ```bash
 cd backend
 ./mvnw spring-boot:run
 ```
 
-No Windows, use `mvnw.cmd spring-boot:run`. A API fica disponível em `http://localhost:8080`.
+On Windows, use `mvnw.cmd spring-boot:run`. The API runs at `http://localhost:8080`.
 
-### 4. Execução do Frontend (React + Vite)
+### 4. Run the frontend (React + Vite)
 
-Em outro terminal:
+In another terminal:
 
 ```bash
 cd frontend
@@ -115,12 +117,12 @@ npm install
 npm run dev
 ```
 
-Acesse no navegador:
+Open in your browser:
 
-* Portal do cliente: `http://localhost:5173`
-* Central de atendimento: `http://localhost:5173/atendimento`
+* Customer portal: `http://localhost:5173`
+* Agent console: `http://localhost:5173/atendimento`
 
-### 5. Testes
+### 5. Tests
 
 ```bash
 cd backend
@@ -135,11 +137,11 @@ npm run build
 
 ---
 
-## Banco de Dados
+## Database
 
-Por padrão o backend usa **H2 em memória**, e os dados são apagados quando a aplicação reinicia. O console do H2 fica em `http://localhost:8080/h2-console` (JDBC URL `jdbc:h2:mem:aiticket_db`, usuário `sa`, senha `password`).
+By default the backend uses **in-memory H2**, so data is wiped when the application restarts. The H2 console is at `http://localhost:8080/h2-console` (JDBC URL `jdbc:h2:mem:aiticket_db`, user `sa`, password `password`).
 
-Para usar **PostgreSQL**, suba o banco com Docker e ative o perfil `postgres`:
+To use **PostgreSQL**, start the database with Docker and enable the `postgres` profile:
 
 ```bash
 docker compose up -d
@@ -152,26 +154,26 @@ SPRING_PROFILES_ACTIVE=postgres ./mvnw spring-boot:run
 
 ---
 
-## API REST
+## REST API
 
-| Método | Rota | Descrição |
+| Method | Route | Description |
 |---|---|---|
-| `POST` | `/api/tickets` | Abre e classifica um chamado |
-| `GET` | `/api/tickets` | Lista os chamados, do mais recente ao mais antigo |
-| `GET` | `/api/tickets/{id}` | Detalhes de um chamado |
-| `PATCH` | `/api/tickets/{id}/status` | Altera o status |
-| `PATCH` | `/api/tickets/{id}/classification` | Corrige categoria, prioridade e setor |
-| `GET` | `/api/tickets/{id}/interactions` | Histórico de mensagens |
-| `POST` | `/api/tickets/{id}/interactions` | Envia mensagem como cliente (`USER`) ou atendente (`ATTENDANT`) |
-| `GET` | `/api/tickets/{id}/summary` | Resumo do histórico |
-| `GET` | `/api/tickets/{id}/suggest-response` | Sugestão de resposta para o atendente |
-| `GET` | `/api/dashboard/stats` | Quantidade de chamados por status |
-| `GET` | `/api/system/info` | Indica se a IA está ativa ou em modo local |
+| `POST` | `/api/tickets` | Opens and classifies a ticket |
+| `GET` | `/api/tickets` | Lists tickets, newest first |
+| `GET` | `/api/tickets/{id}` | Ticket details |
+| `PATCH` | `/api/tickets/{id}/status` | Changes the status |
+| `PATCH` | `/api/tickets/{id}/classification` | Corrects category, priority and department |
+| `GET` | `/api/tickets/{id}/interactions` | Message history |
+| `POST` | `/api/tickets/{id}/interactions` | Sends a message as customer (`USER`) or agent (`ATTENDANT`) |
+| `GET` | `/api/tickets/{id}/summary` | History summary |
+| `GET` | `/api/tickets/{id}/suggest-response` | Suggested reply for the agent |
+| `GET` | `/api/dashboard/stats` | Ticket count by status |
+| `GET` | `/api/system/info` | Whether the AI is active or in local mode |
 
-Os erros seguem o formato Problem Details (RFC 9457): `400` para dados inválidos, `404` para chamado inexistente e `409` para operações não permitidas no status atual.
+Errors follow the Problem Details format (RFC 9457): `400` for invalid data, `404` for a missing ticket and `409` for operations not allowed in the current status.
 
 ---
 
-## Autor
+## Author
 
 Ronaldo Dutra Filho
